@@ -2,8 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std;
+use std::io;
 use std::path::{Path, PathBuf};
+use std::slice;
 
 use failure::Error;
 
@@ -42,7 +43,7 @@ impl From<SubfeatureType> for FeatureType {
 }
 
 pub struct SubfeatureIter<'a> {
-    inner: std::slice::Iter<'a, Subfeature>,
+    inner: slice::Iter<'a, Subfeature>,
 }
 
 impl<'a> Iterator for SubfeatureIter<'a> {
@@ -145,7 +146,7 @@ impl Feature {
         }
     }
 
-    fn read_sysfs_label(&self) -> Result<String, Error> {
+    fn read_sysfs_label(&self) -> io::Result<String> {
         let attr = format!("{}_label", self.name);
         sysfs::sysfs_read_attr(self.dir.as_ref(), attr.as_ref())
     }

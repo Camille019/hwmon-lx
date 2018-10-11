@@ -520,9 +520,8 @@ impl Subfeature {
     ///
     /// Note: This function does not take into account the configuration file.
     fn read_sysfs_value(&self) -> Result<f64, Error> {
-        sysfs_read_file(&self.path)
-            .and_then(|s| Ok(s.parse::<f64>()?))
-            .map(|value| value / self.subfeature_type.scale())
+        let value = sysfs_read_file(&self.path)?.parse::<f64>()?;
+        Ok(value / self.subfeature_type.scale())
     }
 
     /// Write the value to sysfs file. Before it apply the proper type scaling.
