@@ -11,7 +11,7 @@ use std::str::FromStr;
 use failure::Error;
 use regex::Regex;
 
-use bus::{BusId, BusType};
+use bus::{Bus, BusType};
 use context::Context;
 use feature::{Feature, FeatureType};
 use subfeature::Subfeature;
@@ -32,7 +32,7 @@ impl<'a> Iterator for FeatureIter<'a> {
 pub struct Chip {
     path: PathBuf,
     prefix: String,
-    bus: BusId,
+    bus: Bus,
     address: u32,
     features: HashMap<(FeatureType, u32), Feature>,
 }
@@ -53,7 +53,7 @@ impl Chip {
         self.path.as_ref()
     }
 
-    pub fn bus(&self) -> &BusId {
+    pub fn bus(&self) -> &Bus {
         &self.bus
     }
 
@@ -108,7 +108,7 @@ impl Chip {
         let prefix = sysfs_read_attr(hwmon_path, "name")?;
 
         // Find bus type
-        let mut bus = BusId::new(BusType::Virtual, 0, context.clone());
+        let mut bus = Bus::new(BusType::Virtual, 0, context.clone());
         let mut address = 0u32;
 
         if let Some(dev_path) = dev_path {
@@ -179,10 +179,10 @@ fn get_chip_bus_from_name(
     subsytem: &str,
     device_name: &str,
     context: &Context,
-) -> Result<(BusId, u32), Error> {
+) -> Result<(Bus, u32), Error> {
     let mut bus_type: BusType;
     let mut bus_number: i16;
-    let mut address: u32;
+    let address: u32;
 
     match subsytem {
         "i2c" => {
@@ -270,7 +270,7 @@ fn get_chip_bus_from_name(
         _ => return Err(format_err!("Unknown device")),
     }
 
-    Ok((BusId::new(bus_type, bus_number, context.clone()), address))
+    Ok((Bus::new(bus_type, bus_number, context.clone()), address))
 }
 
 pub fn read_sysfs_chips(context: &Context) -> Result<Vec<Chip>, Error> {

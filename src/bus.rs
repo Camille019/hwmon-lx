@@ -2,10 +2,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use context::*;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+
+use failure::Error;
+use regex::Regex;
+
+use context::Context;
+use sysfs::*;
 
 #[allow(non_snake_case)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BusType {
     I2C,
     ISA,
@@ -18,56 +26,139 @@ pub enum BusType {
 }
 
 #[derive(Clone)]
-pub struct BusId {
+pub struct Bus {
     bus_type: BusType,
     bus_number: i16,
     context: Context,
 }
 
-impl BusId {
-    pub fn new(bus_type: BusType, bus_number: i16, context: Context) -> BusId {
-        BusId {
+impl Bus {
+    pub fn new(bus_type: BusType, bus_number: i16, context: Context) -> Bus {
+        Bus {
             bus_type,
             bus_number,
             context,
         }
     }
 
+    /// Return the bus type
     pub fn get_type(&self) -> BusType {
         self.bus_type
     }
 
+    /// Return the bus number
     pub fn number(&self) -> i16 {
         self.bus_number
     }
 
-    pub fn adapter_name(&self) -> String {
-        let mut name = match self.bus_type {
-            BusType::ISA => "ISA adapter",
-            BusType::PCI => "PCI adapter",
+    /// Return the adapter name of the bus. If it could not be found, it returns `None`
+    pub fn adapter_name(&self) -> Option<&str> {
+        match self.bus_type {
+            BusType::ISA => Some("ISA adapter"),
+            BusType::PCI => Some("PCI adapter"),
             // SPI should not be here, but for now SPI adapters have no name
             // so we don't have any custom string to return.
-            BusType::SPI => "SPI adapter",
-            BusType::Virtual => "Virtual device",
-            BusType::ACPI => "ACPI interface",
+            BusType::SPI => Some("SPI adapter"),
+            BusType::Virtual => Some("Virtual device"),
+            BusType::ACPI => Some("ACPI interface"),
             // HID should probably not be there either, but I don't know if
             // HID buses have a name nor where to find it.
-            BusType::HID => "HID adapter",
-            BusType::MDIO => "MDIO adapter",
-            _ => "",
-        }.to_string();
-
-        // Bus types with several instances
-        if name.is_empty() {
-            let proc_bus = self.context.buses();
-            for bus in proc_bus.iter() {
-                if bus.get_type() == self.get_type() && bus.number() == self.number() {
-                    name = bus.adapter().to_string();
-                    break;
+            BusType::HID => Some("HID adapter"),
+            BusType::MDIO => Some("MDIO adapter"),
+            // Bus types with several instances
+            BusType::I2C => {
+                for adapter in self.context.adapters().iter() {
+                    if adapter.bus_type() == self.bus_type
+                        && adapter.bus_number() == self.bus_number
+                    {
+                        return Some(adapter.name());
+                    }
                 }
+                None
             }
         }
-
-        name
     }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct BusAdapter {
+    name: String,
+    bus_type: BusType,
+    bus_number: i16,
+}
+
+impl BusAdapter {
+    fn from_sysfs_i2c(path: &Path) -> Result<Option<BusAdapter>, Error> {
+        lazy_static! {
+            static ref RE_I2C: Regex = Regex::new(r"^i2c\-([[:digit:]]+)").unwrap();
+        }
+
+        let classdev = path.file_name().and_then(|s| s.to_str()).unwrap();
+
+        let caps = RE_I2C
+            .captures(classdev)
+            .ok_or_else(|| format_err!("Failed to parse I2C bus name"))?;
+
+        let bus_number = i16::from_str(&caps[1])?;
+
+        if bus_number == 9191 {
+            return Ok(None); // legacy ISA
+        }
+
+        // Get the adapter name from the classdev "name" attribute
+        // (Linux 2.6.20 and later). If it fails, fall back to
+        // the device "name" attribute (for older kernels).
+        let name =
+            sysfs_read_attr(path, "name").or_else(|_| sysfs_read_attr(path, "device/name"))?;
+
+        Ok(Some(BusAdapter {
+            name,
+            bus_type: BusType::I2C,
+            bus_number,
+        }))
+    }
+
+    pub fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+
+    pub fn bus_type(&self) -> BusType {
+        self.bus_type
+    }
+
+    pub fn bus_number(&self) -> i16 {
+        self.bus_number
+    }
+}
+
+pub(crate) fn read_sysfs_busses() -> Result<Vec<BusAdapter>, Error> {
+    let mut res = Vec::new();
+
+    let mut adapter_path = PathBuf::from(SYSFS_MOUNT);
+    adapter_path.push("class/i2c-adapter");
+
+    if adapter_path.is_dir() {
+        for entry in fs::read_dir(adapter_path)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if let Some(bus) = BusAdapter::from_sysfs_i2c(path.as_ref())? {
+                res.push(bus);
+            }
+        }
+    } else {
+        let mut i2c_path = PathBuf::from(SYSFS_MOUNT);
+        i2c_path.push("bus/i2c/devices");
+
+        for entry in fs::read_dir(i2c_path)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if let Some(bus) = BusAdapter::from_sysfs_i2c(path.as_ref())? {
+                res.push(bus);
+            }
+        }
+    }
+
+    Ok(res)
 }

@@ -18,7 +18,7 @@ extern crate lazy_static;
 extern crate log;
 extern crate libc;
 
-pub use bus::{BusId, BusType};
+pub use bus::{Bus, BusType};
 pub use chip::{read_sysfs_chips, Chip, FeatureIter};
 pub use context::Context;
 pub use feature::{Feature, FeatureType, SubfeatureIter};

@@ -10,7 +10,11 @@ fn main() {
         Ok(chips) => {
             for chip in chips.iter() {
                 println!("{}", chip.name());
-                println!("Adapter: {}", chip.bus().adapter_name());
+                if let Some(name) = chip.bus().adapter_name() {
+                    println!("Adapter: {}", name);
+                } else {
+                    eprintln!("Can't get adapter name");
+                }
                 for feature in chip.features_iter() {
                     println!("  - {}", feature.label());
                     for subfeature in feature.subfeatures_iter() {
