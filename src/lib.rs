@@ -9,6 +9,7 @@ mod feature;
 pub mod subfeature;
 mod sysfs;
 
+extern crate ratio;
 extern crate regex;
 #[macro_use]
 extern crate failure;

@@ -11,143 +11,162 @@ use std::path::{Path, PathBuf};
 
 use failure::Error;
 use libc;
+use ratio::{self, Rational};
 use regex::Regex;
 
 use feature::FeatureType;
 use sysfs::*;
 
-#[allow(non_camel_case_types)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Fan {
-    Input,
-    Min,
-    Max,
-    Div,
-    Pulses,
-    Target,
+macro_rules! decl_subfeatures {
+    (($SfName:ident, $MAP_NAME:ident) [ $($Variant:ident { $pattern:expr, $ratio:ident, $alarm:expr}),* $(,)* ]) => {
+        #[allow(non_camel_case_types)]
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        pub enum $SfName {
+            $($Variant),*
+        }
+
+        impl $SfName {
+            fn scale(self) -> f64 {
+                match self {
+                    $($SfName::$Variant => (ratio::$ratio::DENOM as f64) / (ratio::$ratio::NUM as f64),)*
+                }
+            }
+
+            /// Return `true` if the subfeature variant is an alarm.
+            pub fn alarm(self) -> bool {
+                match self {
+                    $($SfName::$Variant => $alarm,)*
+                }
+            }
+        }
+
+        lazy_static! {
+            static ref $MAP_NAME: HashMap<&'static str, SubfeatureType> = {
+                let mut m = HashMap::new();
+                $(m.insert($pattern, SubfeatureType::$SfName($SfName::$Variant));)*
+                m.shrink_to_fit();
+                m
+            };
+        }
+    }
+}
+
+decl_subfeatures!((Fan, FAN_MAP) [
+    Input { "input", Unity, false },
+    Min { "min", Unity, false },
+    Max { "max", Unity, false },
+    Div { "div", Unity, false },
+    Pulses { "pulses", Unity, false },
+    Target { "target", Unity, false },
     // Alarms
-    Alarm,
-    Min_Alarm,
-    Max_Alarm,
-    Fault,
-    Beep,
-}
+    Alarm { "alarm", Unity, true },
+    Min_Alarm { "min_alarm", Unity, true },
+    Max_Alarm { "max_alarm", Unity, true },
+    Fault { "fault", Unity, false },
+    Beep { "beep", Unity, false },
+]);
 
-#[allow(non_camel_case_types)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Temperature {
-    Input,
-    Min,
-    Min_Hyst,
-    Max,
-    Max_Hyst,
-    Crit_Min,
-    Crit_Min_Hyst,
-    Crit_Max,
-    Crit_Max_Hyst,
-    Emergency,
-    Emergency_Hyst,
-    Lowest,
-    Highest,
-    Type,
-    Offset,
+decl_subfeatures!((Temperature, TEMPERATURE_MAP) [
+    Input { "input", Milli, false },
+    Max { "max", Milli, false },
+    Max_Hyst { "max_hyst", Milli, false },
+    Min { "min", Milli, false },
+    Min_Hyst { "min_hyst", Milli, false },
+    Crit_Max { "crit", Milli, false },
+    Crit_Max_Hyst { "crit_hyst", Milli, false },
+    Crit_Min { "lcrit", Milli, false },
+    Crit_Min_Hyst { "lcrit_hyst", Milli, false },
+    Emergency { "emergency", Milli, false },
+    Emergency_Hyst { "emergency_hyst", Milli, false },
+    Lowest { "lowest", Milli, false },
+    Highest { "highest", Milli, false },
+    Offset { "offset", Milli, false },
+    Type { "type", Unity, false },
     // Alarms
-    Alarm,
-    Min_Alarm,
-    Max_Alarm,
-    Emergency_Alarm,
-    Crit_Min_Alarm,
-    Crit_Max_Alarm,
-    Fault,
-    Beep,
-}
+    Alarm { "alarm", Unity, true },
+    Max_Alarm { "max_alarm", Unity, true },
+    Min_Alarm { "min_alarm", Unity, true },
+    Emergency_Alarm { "emergency_alarm", Unity, true },
+    Crit_Max_Alarm { "crit_alarm", Unity, true },
+    Crit_Min_Alarm { "lcrit_alarm", Unity, true },
+    Fault { "fault", Unity, false },
+    Beep { "beep", Unity, false },
+]);
 
-#[allow(non_camel_case_types)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Voltage {
-    Input,
-    Min,
-    Max,
-    Crit_Min,
-    Crit_Max,
-    Average,
-    Lowest,
-    Highest,
+decl_subfeatures!((Voltage, VOLTAGE_MAP) [
+    Input { "input", Milli, false },
+    Max { "max", Milli, false },
+    Min { "min", Milli, false },
+    Crit_Max { "crit", Milli, false },
+    Crit_Min { "lcrit", Milli, false },
+    Average { "average", Milli, false },
+    Highest { "highest", Milli, false },
+    Lowest { "lowest", Milli, false },
     // Alarms
-    Alarm,
-    Min_Alarm,
-    Max_Alarm,
-    Crit_Min_Alarm,
-    Crit_Max_Alarm,
-    Beep,
-}
+    Alarm { "alarm", Unity, true },
+    Max_Alarm { "max_alarm", Unity, true },
+    Min_Alarm { "min_alarm", Unity, true },
+    Crit_Max_Alarm { "crit_alarm", Unity, true },
+    Crit_Min_Alarm { "lcrit_alarm", Unity, true },
+    Beep { "beep", Unity, false },
+]);
 
-#[allow(non_camel_case_types)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Current {
-    Input,
-    Min,
-    Max,
-    Crit_Min,
-    Crit_Max,
-    Average,
-    Lowest,
-    Highest,
+decl_subfeatures!((Current, CURRENT_MAP) [
+    Input { "input", Milli, false },
+    Max { "max", Milli, false },
+    Min { "min", Milli, false },
+    Crit_Max { "crit", Milli, false },
+    Crit_Min { "lcrit", Milli, false },
+    Average { "average", Milli, false },
+    Highest { "highest", Milli, false },
+    Lowest { "lowest", Milli, false },
     // Alarms
-    Alarm,
-    Min_Alarm,
-    Max_Alarm,
-    Crit_Min_Alarm,
-    Crit_Max_Alarm,
-    Beep,
-}
+    Alarm { "alarm", Unity, true },
+    Max_Alarm { "max_alarm", Unity, true },
+    Min_Alarm { "min_alarm", Unity, true },
+    Crit_Max_Alarm { "crit_alarm", Unity, true },
+    Crit_Min_Alarm { "lcrit_alarm", Unity, true },
+    Beep { "beep", Unity, false },
+]);
 
-#[allow(non_camel_case_types)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Power {
-    Average,
-    Average_Lowest,
-    Average_Highest,
-    Input,
-    Input_Lowest,
-    Input_Highest,
-    Cap,
-    Cap_Min,
-    Cap_Max,
-    Cap_Hyst,
-    Min,
-    Max,
-    Crit_Min,
-    Crit_Max,
-    Average_Interval,
-    Accuracy,
+decl_subfeatures!((Power, POWER_MAP) [
+    Average { "average", Micro, false },
+    Average_Highest { "average_highest", Micro, false },
+    Average_Lowest { "average_lowest", Micro, false },
+    Input { "input", Micro, false },
+    Input_Highest { "input_highest", Micro, false },
+    Input_Lowest { "input_lowest", Micro, false },
+    Cap { "cap", Micro, false },
+    Cap_Max { "cap_max", Micro, false },
+    Cap_Min { "cap_min", Micro, false },
+    Cap_Hyst { "cap_hyst", Micro, false },
+    Max { "max", Micro, false },
+    Min { "min", Micro, false },
+    Crit_Max { "crit", Micro, false },
+    Crit_Min { "lcrit", Micro, false },
+    Average_Interval { "average_interval", Milli, false },
+    Accuracy { "accuracy", Unity, false },
     // Alarms
-    Alarm,
-    Cap_Alarm,
-    Min_Alarm,
-    Max_Alarm,
-    Crit_Min_Alarm,
-    Crit_Max_Alarm,
-}
+    Alarm { "alarm", Unity, true },
+    Cap_Alarm { "cap_alarm", Unity, true },
+    Max_Alarm { "max_alarm", Unity, true },
+    Min_Alarm { "min_alarm", Unity, true },
+    Crit_Max_Alarm { "crit_alarm", Unity, true },
+    Crit_Min_Alarm { "lcrit_alarm", Unity, true },
+]);
 
-#[allow(non_camel_case_types)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Energy {
-    Input,
-}
+decl_subfeatures!((Energy, ENERGY_MAP) [
+    Input { "input", Micro, false },
+]);
 
-#[allow(non_camel_case_types)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Humidity {
-    Input,
-}
+decl_subfeatures!((Humidity, HUMIDITY_MAP) [
+    Input { "input", Milli, false },
+]);
 
-#[allow(non_camel_case_types)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Intrusion {
-    Alarm,
-    Beep,
-}
+decl_subfeatures!((Intrusion, INTRUSION_MAP) [
+    Alarm { "alarm", Micro, false },
+    Beep { "beep", Micro, false },
+]);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SubfeatureType {
@@ -164,269 +183,52 @@ pub enum SubfeatureType {
 }
 
 impl SubfeatureType {
+    fn to_native(self, value: f64) -> i64 {
+        (value * self.scale()).round() as i64
+    }
+
+    fn to_unity(self, value: f64) -> f64 {
+        value / self.scale()
+    }
+
     fn scale(self) -> f64 {
-        const SCALE_MILLI: f64 = 1000.0;
-        const SCALE_MICRO: f64 = 1_000_000.0;
-
         match self {
-            SubfeatureType::Fan(_) => 1.0,
-            SubfeatureType::Temperature(sft) => match sft {
-                Temperature::Input
-                | Temperature::Min
-                | Temperature::Min_Hyst
-                | Temperature::Max
-                | Temperature::Max_Hyst
-                | Temperature::Crit_Min
-                | Temperature::Crit_Min_Hyst
-                | Temperature::Crit_Max
-                | Temperature::Crit_Max_Hyst
-                | Temperature::Emergency
-                | Temperature::Emergency_Hyst
-                | Temperature::Lowest
-                | Temperature::Highest
-                | Temperature::Offset => SCALE_MILLI,
+            SubfeatureType::Fan(sft) => sft.scale(),
+            SubfeatureType::Temperature(sft) => sft.scale(),
+            SubfeatureType::Voltage(sft) => sft.scale(),
+            SubfeatureType::Current(sft) => sft.scale(),
+            SubfeatureType::Power(sft) => sft.scale(),
+            SubfeatureType::Energy(sft) => sft.scale(),
+            SubfeatureType::Humidity(sft) => sft.scale(),
+            SubfeatureType::Intrusion(sft) => sft.scale(),
+            SubfeatureType::Cpu => ratio::Milli::DENOM as f64,
+            SubfeatureType::BeepEnable => ratio::Unity::DENOM as f64,
+        }
+    }
 
-                Temperature::Alarm
-                | Temperature::Min_Alarm
-                | Temperature::Max_Alarm
-                | Temperature::Crit_Min_Alarm
-                | Temperature::Crit_Max_Alarm
-                | Temperature::Fault
-                | Temperature::Beep
-                | Temperature::Emergency_Alarm
-                | Temperature::Type => 1.0,
-            },
-            SubfeatureType::Voltage(sft) => match sft {
-                Voltage::Input
-                | Voltage::Min
-                | Voltage::Max
-                | Voltage::Crit_Min
-                | Voltage::Crit_Max
-                | Voltage::Average
-                | Voltage::Lowest
-                | Voltage::Highest => SCALE_MILLI,
-
-                Voltage::Alarm
-                | Voltage::Min_Alarm
-                | Voltage::Max_Alarm
-                | Voltage::Beep
-                | Voltage::Crit_Min_Alarm
-                | Voltage::Crit_Max_Alarm => 1.0,
-            },
-            SubfeatureType::Current(sft) => match sft {
-                Current::Input
-                | Current::Min
-                | Current::Max
-                | Current::Crit_Min
-                | Current::Crit_Max
-                | Current::Average
-                | Current::Lowest
-                | Current::Highest => SCALE_MILLI,
-
-                Current::Alarm
-                | Current::Min_Alarm
-                | Current::Max_Alarm
-                | Current::Beep
-                | Current::Crit_Min_Alarm
-                | Current::Crit_Max_Alarm => 1.0,
-            },
-            SubfeatureType::Power(sft) => match sft {
-                Power::Average
-                | Power::Average_Lowest
-                | Power::Average_Highest
-                | Power::Input
-                | Power::Input_Lowest
-                | Power::Input_Highest
-                | Power::Cap
-                | Power::Cap_Min
-                | Power::Cap_Max
-                | Power::Cap_Hyst
-                | Power::Min
-                | Power::Max
-                | Power::Crit_Min
-                | Power::Crit_Max => SCALE_MICRO,
-
-                Power::Average_Interval => SCALE_MILLI,
-
-                Power::Alarm
-                | Power::Cap_Alarm
-                | Power::Min_Alarm
-                | Power::Max_Alarm
-                | Power::Crit_Min_Alarm
-                | Power::Crit_Max_Alarm
-                | Power::Accuracy => 1.0,
-            },
-            SubfeatureType::Energy(sft) => match sft {
-                Energy::Input => SCALE_MICRO,
-            },
-            SubfeatureType::Humidity(sft) => match sft {
-                Humidity::Input => SCALE_MILLI,
-            },
-            SubfeatureType::Cpu => SCALE_MILLI,
-            SubfeatureType::Intrusion(_) => 1.0,
-            SubfeatureType::BeepEnable => 1.0,
+    /// Return `true` if the subfeature variant is an alarm.
+    pub fn alarm(self) -> bool {
+        match self {
+            SubfeatureType::Fan(sft) => sft.alarm(),
+            SubfeatureType::Temperature(sft) => sft.alarm(),
+            SubfeatureType::Voltage(sft) => sft.alarm(),
+            SubfeatureType::Current(sft) => sft.alarm(),
+            SubfeatureType::Power(sft) => sft.alarm(),
+            SubfeatureType::Energy(sft) => sft.alarm(),
+            SubfeatureType::Humidity(sft) => sft.alarm(),
+            SubfeatureType::Intrusion(sft) => sft.alarm(),
+            SubfeatureType::Cpu => false,
+            SubfeatureType::BeepEnable => false,
         }
     }
 }
 
-lazy_static! {
-    static ref FAN_MAP: HashMap<&'static str, SubfeatureType> = {
-        use self::Fan::*;
-        use self::SubfeatureType::*;
-
-        let mut m = HashMap::new();
-        m.insert("input", Fan(Input));
-        m.insert("min", Fan(Min));
-        m.insert("max", Fan(Max));
-        m.insert("div", Fan(Div));
-        m.insert("pulses", Fan(Pulses));
-        m.insert("target", Fan(Target));
-        m.insert("alarm", Fan(Alarm));
-        m.insert("min_alarm", Fan(Min_Alarm));
-        m.insert("max_alarm", Fan(Max_Alarm));
-        m.insert("fault", Fan(Fault));
-        m.insert("beep", Fan(Beep));
-        m.shrink_to_fit();
-        m
-    };
-    static ref TEMPERATURE_MAP: HashMap<&'static str, SubfeatureType> = {
-        use self::SubfeatureType::*;
-        use self::Temperature::*;
-
-        let mut m = HashMap::new();
-        m.insert("input", Temperature(Input));
-        m.insert("max", Temperature(Max));
-        m.insert("max_hyst", Temperature(Max_Hyst));
-        m.insert("min", Temperature(Min));
-        m.insert("min_hyst", Temperature(Min_Hyst));
-        m.insert("crit", Temperature(Crit_Max));
-        m.insert("crit_hyst", Temperature(Crit_Max_Hyst));
-        m.insert("lcrit", Temperature(Crit_Min));
-        m.insert("lcrit_hyst", Temperature(Crit_Min_Hyst));
-        m.insert("emergency", Temperature(Emergency));
-        m.insert("emergency_hyst", Temperature(Emergency_Hyst));
-        m.insert("lowest", Temperature(Lowest));
-        m.insert("highest", Temperature(Highest));
-        m.insert("alarm", Temperature(Alarm));
-        m.insert("min_alarm", Temperature(Min_Alarm));
-        m.insert("max_alarm", Temperature(Max_Alarm));
-        m.insert("crit_alarm", Temperature(Crit_Max_Alarm));
-        m.insert("emergency_alarm", Temperature(Emergency_Alarm));
-        m.insert("lcrit_alarm", Temperature(Crit_Min_Alarm));
-        m.insert("fault", Temperature(Fault));
-        m.insert("type", Temperature(Type));
-        m.insert("offset", Temperature(Offset));
-        m.insert("beep", Temperature(Beep));
-        m.shrink_to_fit();
-        m
-    };
-    static ref VOLTAGE_MAP: HashMap<&'static str, SubfeatureType> = {
-        use self::SubfeatureType::*;
-        use self::Voltage::*;
-
-        let mut m = HashMap::new();
-        m.insert("input", Voltage(Input));
-        m.insert("min", Voltage(Min));
-        m.insert("max", Voltage(Max));
-        m.insert("lcrit", Voltage(Crit_Min));
-        m.insert("crit", Voltage(Crit_Max));
-        m.insert("average", Voltage(Average));
-        m.insert("lowest", Voltage(Lowest));
-        m.insert("highest", Voltage(Highest));
-        m.insert("alarm", Voltage(Alarm));
-        m.insert("min_alarm", Voltage(Min_Alarm));
-        m.insert("max_alarm", Voltage(Max_Alarm));
-        m.insert("lcrit_alarm", Voltage(Crit_Min_Alarm));
-        m.insert("crit_alarm", Voltage(Crit_Max_Alarm));
-        m.insert("beep", Voltage(Beep));
-        m.shrink_to_fit();
-        m
-    };
-    static ref CURRENT_MAP: HashMap<&'static str, SubfeatureType> = {
-        use self::Current::*;
-        use self::SubfeatureType::*;
-
-        let mut m = HashMap::new();
-        m.insert("input", Current(Input));
-        m.insert("min", Current(Min));
-        m.insert("max", Current(Max));
-        m.insert("lcrit", Current(Crit_Min));
-        m.insert("crit", Current(Crit_Max));
-        m.insert("average", Current(Average));
-        m.insert("lowest", Current(Lowest));
-        m.insert("highest", Current(Highest));
-        m.insert("alarm", Current(Alarm));
-        m.insert("min_alarm", Current(Min_Alarm));
-        m.insert("max_alarm", Current(Max_Alarm));
-        m.insert("lcrit_alarm", Current(Crit_Min_Alarm));
-        m.insert("crit_alarm", Current(Crit_Max_Alarm));
-        m.insert("beep", Current(Beep));
-        m.shrink_to_fit();
-        m
-    };
-    static ref POWER_MAP: HashMap<&'static str, SubfeatureType> = {
-        use self::Power::*;
-        use self::SubfeatureType::*;
-
-        let mut m = HashMap::new();
-        m.insert("average", Power(Average));
-        m.insert("average_highest", Power(Average_Highest));
-        m.insert("average_lowest", Power(Average_Lowest));
-        m.insert("input", Power(Input));
-        m.insert("input_highest", Power(Input_Highest));
-        m.insert("input_lowest", Power(Input_Lowest));
-        m.insert("accuracy", Power(Accuracy));
-        m.insert("cap", Power(Cap));
-        m.insert("cap_hyst", Power(Cap_Hyst));
-        m.insert("cap_max", Power(Cap_Max));
-        m.insert("cap_min", Power(Cap_Min));
-        m.insert("cap_alarm", Power(Cap_Alarm));
-        m.insert("alarm", Power(Alarm));
-        m.insert("max", Power(Max));
-        m.insert("min", Power(Min));
-        m.insert("max_alarm", Power(Max_Alarm));
-        m.insert("min_alarm", Power(Min_Alarm));
-        m.insert("crit", Power(Crit_Max));
-        m.insert("lcrit", Power(Crit_Min));
-        m.insert("crit_alarm", Power(Crit_Max_Alarm));
-        m.insert("lcrit_alarm", Power(Crit_Min_Alarm));
-        m.insert("average_interval", Power(Average_Interval));
-        m.shrink_to_fit();
-        m
-    };
-    static ref ENERGY_MAP: HashMap<&'static str, SubfeatureType> = {
-        use self::Energy::*;
-        use self::SubfeatureType::*;
-
-        let mut m = HashMap::new();
-        m.insert("input", Energy(Input));
-        m.shrink_to_fit();
-        m
-    };
-    static ref HUMIDITY_MAP: HashMap<&'static str, SubfeatureType> = {
-        use self::Humidity::*;
-        use self::SubfeatureType::*;
-
-        let mut m = HashMap::new();
-        m.insert("input", Humidity(Input));
-        m.shrink_to_fit();
-        m
-    };
+lazy_static!{
     static ref CPU_MAP: HashMap<&'static str, SubfeatureType> = {
         use self::SubfeatureType::*;
 
         let mut m = HashMap::new();
         m.insert("vid", Cpu);
-        m.shrink_to_fit();
-        m
-    };
-    static ref INTRUSION_MAP: HashMap<&'static str, SubfeatureType> = {
-        use self::Intrusion::*;
-        use self::SubfeatureType::*;
-
-        let mut m = HashMap::new();
-        m.insert("alarm", Intrusion(Alarm));
-        m.insert("beep", Intrusion(Beep));
         m.shrink_to_fit();
         m
     };
@@ -521,20 +323,19 @@ impl Subfeature {
     /// Note: This function does not take into account the configuration file.
     fn read_sysfs_value(&self) -> Result<f64, Error> {
         let value = sysfs_read_file(&self.path)?.parse::<f64>()?;
-        Ok(value / self.subfeature_type.scale())
+        Ok(self.subfeature_type.to_unity(value))
     }
 
     /// Write the value to sysfs file. Before it apply the proper type scaling.
     ///
     /// Note: This function does not take into account the configuration file.
     fn write_sysfs_value(&self, value: f64) -> std::io::Result<()> {
-        let i_value = (value * self.subfeature_type.scale()).round() as u32;
         let mut file = OpenOptions::new()
             .read(false)
             .write(true)
             .create(false)
             .open(&self.path)?;
-        write!(file, "{}", i_value)
+        write!(file, "{}", self.subfeature_type.to_native(value))
     }
 
     pub(crate) fn from_path<P: AsRef<Path>>(path: P) -> Result<(u32, Subfeature), Error> {
