@@ -6,8 +6,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::slice;
 
-use failure::Error;
-
+use error::*;
 use subfeature::{Subfeature, SubfeatureType};
 use sysfs;
 
@@ -132,7 +131,9 @@ impl Feature {
         }
     }
 
-    pub(crate) fn push_subfeature(&mut self, subfeature: Subfeature) -> Result<(), Error> {
+    ///
+    /// Return `None` if
+    pub(crate) fn push_subfeature(&mut self, subfeature: Subfeature) -> Result<(), FeatureError> {
         if FeatureType::from(subfeature.get_type()) == self.feature_type {
             debug!(
                 "Add subfeature '{}' to feature '{}'",
@@ -142,7 +143,7 @@ impl Feature {
             self.subfeatures.push(subfeature);
             Ok(())
         } else {
-            Err(format_err!("Invalid subfeature type"))
+            Err(FeatureError::SubfeatureType)
         }
     }
 

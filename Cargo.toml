@@ -8,8 +8,6 @@ keywords = ["sensor", "hwmon", "Linux"]
 categories = ["hardware-support", "os::unix-apis"]
 
 [dependencies]
-failure = "0.1"
-failure_derive = "0.1"
 lazy_static = "1.0"
 libc = "0.2"
 ratio = "0.0.0"

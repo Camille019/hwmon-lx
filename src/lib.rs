@@ -5,14 +5,13 @@
 mod bus;
 mod chip;
 mod context;
+mod error;
 mod feature;
 pub mod subfeature;
 mod sysfs;
 
 extern crate ratio;
 extern crate regex;
-#[macro_use]
-extern crate failure;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]

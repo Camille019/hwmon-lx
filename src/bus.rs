@@ -2,14 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use failure::Error;
 use regex::Regex;
 
 use context::Context;
+use error::*;
 use sysfs::*;
 
 #[allow(non_snake_case)]
@@ -23,6 +24,21 @@ pub enum BusType {
     ACPI,
     HID,
     MDIO,
+}
+
+impl fmt::Display for BusType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            BusType::I2C => write!(f, "I2C"),
+            BusType::ISA => write!(f, "ISA"),
+            BusType::PCI => write!(f, "PCI"),
+            BusType::SPI => write!(f, "SPI"),
+            BusType::Virtual => write!(f, "Virtual"),
+            BusType::ACPI => write!(f, "ACPI"),
+            BusType::HID => write!(f, "HID"),
+            BusType::MDIO => write!(f, "MDIO"),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -97,7 +113,7 @@ impl BusAdapter {
 
         let caps = RE_I2C
             .captures(classdev)
-            .ok_or_else(|| format_err!("Failed to parse I2C bus name"))?;
+            .ok_or(Error::ParseBusName(BusType::I2C))?;
 
         let bus_number = i16::from_str(&caps[1])?;
 

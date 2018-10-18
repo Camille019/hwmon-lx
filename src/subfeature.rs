@@ -9,11 +9,11 @@ use std::io::Write;
 use std::os::linux::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
-use failure::Error;
 use libc;
 use ratio::{self, Rational};
 use regex::Regex;
 
+use error::*;
 use feature::FeatureType;
 use sysfs::*;
 
@@ -145,6 +145,8 @@ decl_subfeatures!((Power, POWER_MAP) [
     Crit_Max { "crit", Micro, false },
     Crit_Min { "lcrit", Micro, false },
     Average_Interval { "average_interval", Milli, false },
+    Average_Interval_Max { "average_interval_max", Milli, false },
+    Average_Interval_Min { "average_interval_min", Milli, false },
     Accuracy { "accuracy", Unity, false },
     // Alarms
     Alarm { "alarm", Unity, true },
@@ -223,7 +225,7 @@ impl SubfeatureType {
     }
 }
 
-lazy_static!{
+lazy_static! {
     static ref CPU_MAP: HashMap<&'static str, SubfeatureType> = {
         use self::SubfeatureType::*;
 
@@ -283,12 +285,12 @@ impl Subfeature {
         self.compute_statement.clone()
     }
 
-    /// Return true if the subfeature is readable
+    /// Return `true` if the subfeature is readable
     pub fn is_readable(&self) -> bool {
         self.is_readable
     }
 
-    /// Return true if the subfeature is writable
+    /// Return `true` if the subfeature is writable
     pub fn is_writable(&self) -> bool {
         self.is_writable
     }
@@ -299,7 +301,7 @@ impl Subfeature {
             // TODO compute statement
             self.read_sysfs_value()
         } else {
-            Err(format_err!("Subfeature not readable"))
+            Err(Error::Access("Subfeature not readable"))
         }
     }
 
@@ -314,7 +316,7 @@ impl Subfeature {
             self.write_sysfs_value(value)?;
             Ok(())
         } else {
-            Err(format_err!("Subfeature not writable"))
+            Err(Error::Access("Subfeature not writable"))
         }
     }
 
@@ -338,20 +340,15 @@ impl Subfeature {
         write!(file, "{}", self.subfeature_type.to_native(value))
     }
 
-    pub(crate) fn from_path<P: AsRef<Path>>(path: P) -> Result<(u32, Subfeature), Error> {
+    pub(crate) fn from_path<P: AsRef<Path>>(path: P) -> Result<(u32, Subfeature), SubfeatureError> {
         let path = path.as_ref();
         if !path.exists() {
-            return Err(format_err!("Subfeature do not exist: {:?}", path));
+            return Err(SubfeatureError::Invalid);
         }
 
-        let name = path
-            .file_name()
-            .and_then(|str| str.to_str())
-            .map(|str| str.to_string())
-            .unwrap();
+        let name = path.file_name().and_then(|str| str.to_str()).unwrap();
 
-        let (feature_number, subfeature_type) =
-            Subfeature::get_properties_from_name(name.as_ref())?;
+        let (feature_number, subfeature_type) = Subfeature::get_properties_from_name(name)?;
 
         let st_mode = path.metadata().map(|m| m.st_mode())?;
         let is_readable = (st_mode & libc::S_IRUSR) == libc::S_IRUSR;
@@ -360,7 +357,7 @@ impl Subfeature {
         Ok((
             feature_number,
             Subfeature {
-                name: name.clone(),
+                name: name.to_string(),
                 path: path.to_path_buf(),
                 subfeature_type,
                 compute_statement: None, // TODO compute statement
@@ -370,14 +367,16 @@ impl Subfeature {
         ))
     }
 
-    fn get_properties_from_name(name: &str) -> Result<(u32, SubfeatureType), Error> {
+    fn get_properties_from_name(name: &str) -> Result<(u32, SubfeatureType), SubfeatureError> {
         if name == "beep_enable" {
             return Ok((0, SubfeatureType::BeepEnable));
         }
 
-        let re = Regex::new(r"^(\D*)(\d+)_(.*)").unwrap();
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"^(\D*)(\d+)_(.*)").unwrap();
+        }
 
-        if let Some(caps) = re.captures(name) {
+        if let Some(caps) = RE.captures(name) {
             let feature_str_id = &caps[1];
             let feature_number = caps[2].parse::<u32>().unwrap();
             let subfeature_str_id = &caps[3];
@@ -388,10 +387,10 @@ impl Subfeature {
             {
                 Ok((feature_number, *sf_type))
             } else {
-                Err(format_err!("Unknown subfeature: {}", name))
+                Err(SubfeatureError::Unknown)
             }
         } else {
-            Err(format_err!("Invalid subfeature: {}", name))
+            Err(SubfeatureError::Invalid)
         }
     }
 }

@@ -8,11 +8,11 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use failure::Error;
 use regex::Regex;
 
 use bus::{Bus, BusType};
 use context::Context;
+use error::*;
 use feature::{Feature, FeatureType};
 use subfeature::Subfeature;
 use sysfs::*;
@@ -102,7 +102,7 @@ impl Chip {
         hwmon_path: &Path,
         dev_path: T,
         context: &Context,
-    ) -> Result<Chip, Error> {
+    ) -> Result<Chip, ChipError> {
         let dev_path = dev_path.into();
 
         let prefix = sysfs_read_attr(hwmon_path, "name")?;
@@ -113,18 +113,12 @@ impl Chip {
 
         if let Some(dev_path) = dev_path {
             let dev_link_path = dev_path.read_link()?;
-            let dev_name = dev_link_path
-                .file_name()
-                .and_then(|s| s.to_str())
-                .ok_or_else(|| format_err!(""))?;
+            let dev_name = dev_link_path.file_name().and_then(|s| s.to_str()).unwrap();
 
             let mut link_path = dev_path.to_owned();
             link_path.push("subsystem");
             let subsys_path = link_path.read_link()?;
-            let subsys = subsys_path
-                .file_name()
-                .and_then(|s| s.to_str())
-                .ok_or_else(|| format_err!(""))?;
+            let subsys = subsys_path.file_name().and_then(|s| s.to_str()).unwrap();
 
             let (_bus, _address) = get_chip_bus_from_name(subsys, dev_name, context)?;
             bus = _bus;
@@ -145,7 +139,7 @@ impl Chip {
         Ok(chip)
     }
 
-    fn read_dynamic_chip(&mut self) -> Result<(), Error> {
+    fn read_dynamic_chip(&mut self) -> Result<(), ChipError> {
         for entry in self
             .path
             .read_dir()?
@@ -165,7 +159,8 @@ impl Chip {
                 self.features
                     .entry((feature_type, feature_number))
                     .or_insert_with(|| Feature::new(feature_path, feature_type, feature_number))
-                    .push_subfeature(subfeature)?;
+                    .push_subfeature(subfeature)
+                    .unwrap();
             } else {
                 debug!("Skip file {:?}", &path);
             }
@@ -179,7 +174,7 @@ fn get_chip_bus_from_name(
     subsytem: &str,
     device_name: &str,
     context: &Context,
-) -> Result<(Bus, u32), Error> {
+) -> Result<(Bus, u32), ChipError> {
     let mut bus_type: BusType;
     let mut bus_number: i16;
     let address: u32;
@@ -191,7 +186,7 @@ fn get_chip_bus_from_name(
             }
             let caps = RE_I2C
                 .captures(device_name)
-                .ok_or_else(|| format_err!("Failed to read I2C info"))?;
+                .ok_or(ChipError::ParseBusInfo(BusType::I2C))?;
 
             bus_number = i16::from_str(&caps[1])?;
             address = u32::from_str_radix(&caps[2], 16)?;
@@ -222,7 +217,7 @@ fn get_chip_bus_from_name(
             }
             let caps = RE_SPI
                 .captures(device_name)
-                .ok_or_else(|| format_err!("Failed to read SPI info"))?;
+                .ok_or(ChipError::ParseBusInfo(BusType::SPI))?;
 
             address = u32::from_str(&caps[2])?;
             bus_number = i16::from_str(&caps[1])?;
@@ -236,7 +231,7 @@ fn get_chip_bus_from_name(
             }
             let caps = RE_PCI
                 .captures(device_name)
-                .ok_or_else(|| format_err!("Failed to read PCI info"))?;
+                .ok_or(ChipError::ParseBusInfo(BusType::PCI))?;
 
             let _domain = u32::from_str_radix(&caps[1], 16)?;
             let _bus = u32::from_str_radix(&caps[2], 16)?;
@@ -267,7 +262,7 @@ fn get_chip_bus_from_name(
             bus_number = 0;
             address = 0;
         }
-        _ => return Err(format_err!("Unknown device")),
+        _ => return Err(ChipError::UnknownDevice),
     }
 
     Ok((Bus::new(bus_type, bus_number, context.clone()), address))
@@ -291,20 +286,22 @@ pub fn read_sysfs_chips(context: &Context) -> Result<Vec<Chip>, Error> {
             // The attributes we want might be those of the hwmon class
             // device, or those of the device itself.
             match Chip::from_path(path.as_ref(), link_path.as_ref(), context) {
-                Ok(chip) => chip,
+                Ok(chip) => Ok(chip),
                 Err(e) => {
                     debug!("{:?}", e);
-                    Chip::from_path(link_path.as_ref(), link_path.as_ref(), context)?
+                    Chip::from_path(link_path.as_ref(), link_path.as_ref(), context)
                 }
             }
         } else {
             // No device link? Treat as virtual
             debug!("{:?}.read_link() -> Err", link_path);
-            Chip::from_path(path.as_ref(), None, context)?
+            Chip::from_path(path.as_ref(), None, context)
         };
 
-        debug!("Add chip '{}'", chip.name());
-        chips.push(chip);
+        if let Ok(chip) = chip {
+            debug!("Add chip '{}'", chip.name());
+            chips.push(chip);
+        }
     }
 
     Ok(chips)
