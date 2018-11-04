@@ -1,0 +1,41 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+WHITESPACE = _{ " " | "\t" | ("\\" ~ NEWLINE) }
+COMMENT = _{ "#" ~ (!(NEWLINE) ~ ANY)* }
+
+file = {
+    SOI ~ NEWLINE* ~
+    (line ~ (NEWLINE+ ~ line)*)? ~
+    NEWLINE* ~ EOI
+}
+
+line = { (bus | chip | label | compute | set | ignore) }
+
+bus = { "bus" ~ name ~ name ~ name }
+chip = { "chip" ~ name_list }
+label = { "label" ~ name ~ name }
+compute = { "compute" ~ name ~ expr ~ "," ~ expr }
+ignore = { "ignore" ~ name }
+set = { "set" ~ name ~ expr }
+
+name_list = { name+ }
+
+name = @{ string | string_quoted }
+
+string = @{ (ASCII_ALPHANUMERIC | "_")+ }
+string_quoted = @{ "\"" ~ inner ~ "\"" }
+inner = ${ (!("\"" | NEWLINE) ~ ANY)* }
+
+expr = {
+    ("(" ~ expr ~ ")")
+    | (( sign | function ) ~ expr)
+    | ((raw | number) ~ (operator ~ expr)*)
+}
+
+raw = @{ "@" }
+number = @{ ASCII_DIGIT* ~ ("." ~ ASCII_DIGIT+)? }
+sign = @{ "-" }
+operator = @{ "+" | "-" | "*" | "/" }
+function = @{ "^" | "`"}

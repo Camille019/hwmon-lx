@@ -7,16 +7,21 @@ mod chip;
 mod context;
 mod error;
 mod feature;
+mod parser;
 pub mod subfeature;
 mod sysfs;
 
-extern crate ratio;
-extern crate regex;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate pest_derive;
+
 extern crate libc;
+extern crate pest;
+extern crate ratio;
+extern crate regex;
 
 pub use bus::{Bus, BusType};
 pub use chip::{read_sysfs_chips, Chip, FeatureIter};
