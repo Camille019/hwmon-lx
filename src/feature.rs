@@ -10,7 +10,7 @@ use error::*;
 use subfeature::{Subfeature, SubfeatureType};
 use sysfs;
 
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum FeatureType {
     Fan,
     Temperature,

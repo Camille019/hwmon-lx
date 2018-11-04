@@ -20,7 +20,7 @@ use sysfs::*;
 macro_rules! decl_subfeatures {
     (($SfName:ident, $MAP_NAME:ident) [ $($Variant:ident { $pattern:expr, $ratio:ident, $alarm:expr}),* $(,)* ]) => {
         #[allow(non_camel_case_types)]
-        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
         pub enum $SfName {
             $($Variant),*
         }
@@ -170,7 +170,7 @@ decl_subfeatures!((Intrusion, INTRUSION_MAP) [
     Beep { "beep", Micro, false },
 ]);
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum SubfeatureType {
     Fan(Fan),
     Temperature(Temperature),
