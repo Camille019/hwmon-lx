@@ -8,8 +8,6 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use regex::Regex;
-
 use bus::{Bus, BusType};
 use context::Context;
 use error::*;
@@ -187,15 +185,12 @@ fn get_chip_bus_from_name(
 
     match subsytem {
         "i2c" => {
-            lazy_static! {
-                static ref RE_I2C: Regex = Regex::new(r"^([[:digit:]]+)\-([[:xdigit:]]+)").unwrap();
-            }
-            let caps = RE_I2C
-                .captures(device_name)
-                .ok_or(ChipError::ParseBusInfo(BusType::I2C))?;
+            // Device name Regex: "^[[:digit:]]+-[[:xdigit:]]+$"
 
-            bus_number = i16::from_str(&caps[1])?;
-            address = u32::from_str_radix(&caps[2], 16)?;
+            let args: Vec<&str> = device_name.split('-').collect();
+
+            bus_number = i16::from_str(args.get(0).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?)?;
+            address = u32::from_str_radix(args.get(1).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?, 16)?;
 
             // find out if legacy ISA or not
             if bus_number == 9191 {
@@ -217,38 +212,37 @@ fn get_chip_bus_from_name(
             }
         }
         "spi" => {
-            lazy_static! {
-                static ref RE_SPI: Regex =
-                    Regex::new(r"^spi([[:digit:]]+).([[:digit:]]+)").unwrap();
-            }
-            let caps = RE_SPI
-                .captures(device_name)
-                .ok_or(ChipError::ParseBusInfo(BusType::SPI))?;
+            // Device name Regex "^spi[[:digit:]]+\.[[:digit:]]+$"
 
-            address = u32::from_str(&caps[2])?;
-            bus_number = i16::from_str(&caps[1])?;
+            let prefix = "spi";
+            if !device_name.starts_with(prefix) || !(device_name.len() > prefix.len()) {
+                return Err(ChipError::ParseBusInfo(BusType::SPI));
+            }
+            let (_, end) = device_name.split_at(prefix.len());
+            let args: Vec<&str> = end.split('.').collect();
+
+            address = u32::from_str(args.get(1).ok_or(ChipError::ParseBusInfo(BusType::SPI))?)?;
+            bus_number = i16::from_str(args.get(0).ok_or(ChipError::ParseBusInfo(BusType::SPI))?)?;
             bus_type = BusType::SPI;
         }
         "pci" => {
-            lazy_static! {
-                static ref RE_PCI: Regex =
-                    Regex::new(r"^([[:xdigit:]]+):([[:xdigit:]]+):([[:xdigit:]]+).([[:xdigit:]]+)")
-                        .unwrap();
-            }
-            let caps = RE_PCI
-                .captures(device_name)
-                .ok_or(ChipError::ParseBusInfo(BusType::PCI))?;
+            // Device name Regex: "^[[:xdigit:]]+:[[:xdigit:]]+:[[:xdigit:]]+\.[[:xdigit:]]+$"
 
-            let _domain = u32::from_str_radix(&caps[1], 16)?;
-            let _bus = u32::from_str_radix(&caps[2], 16)?;
-            let _slot = u32::from_str_radix(&caps[3], 16)?;
-            let _fn = u32::from_str_radix(&caps[4], 16)?;
+            let args: Vec<&str> = device_name.split(':').collect();
+            let args_bis: Vec<&str> = args.last().ok_or(ChipError::ParseBusInfo(BusType::PCI))?.split('.').collect();
+
+            let _domain = u32::from_str_radix(args.get(0).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?, 16)?;
+            let _bus = u32::from_str_radix(args.get(1).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?, 16)?;
+            let _slot = u32::from_str_radix(args_bis.get(0).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?, 16)?;
+            let _fn = u32::from_str_radix(args_bis.get(1).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?, 16)?;
 
             address = (_domain << 16) + (_bus << 8) + (_slot << 3) + _fn;
             bus_type = BusType::PCI;
             bus_number = 0;
         }
         "scsi" => {
+            // Device name Regex: "^[[:digit:]]+:[[:digit:]]+:[[:digit:]]+:[[:xdigit:]]+$"
+
             let args: Vec<&str> = device_name.split(':').collect();
 
             let _bus = u32::from_str(args.get(1).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?)?;

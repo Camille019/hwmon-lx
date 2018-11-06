@@ -7,8 +7,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use regex::Regex;
-
 use context::Context;
 use error::*;
 use sysfs::*;
@@ -108,17 +106,15 @@ pub(crate) struct BusAdapter {
 
 impl BusAdapter {
     fn from_sysfs_i2c(path: &Path) -> Result<Option<BusAdapter>, Error> {
-        lazy_static! {
-            static ref RE_I2C: Regex = Regex::new(r"^i2c\-([[:digit:]]+)").unwrap();
-        }
-
         let classdev = path.file_name().and_then(|s| s.to_str()).unwrap();
 
-        let caps = RE_I2C
-            .captures(classdev)
-            .ok_or(Error::ParseBusName(BusType::I2C))?;
+        let prefix = "i2c-";
+        if !classdev.starts_with(prefix) || !(classdev.len() > prefix.len()) {
+            return Err(Error::ParseBusName(BusType::I2C));
+        }
+        let (_, digits) = classdev.split_at(prefix.len());
 
-        let bus_number = i16::from_str(&caps[1])?;
+        let bus_number = i16::from_str(digits)?;
 
         if bus_number == 9191 {
             return Ok(None); // legacy ISA
