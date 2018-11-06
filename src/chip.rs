@@ -82,6 +82,12 @@ impl Chip {
             ),
             BusType::ACPI => format!("{}-acpi-{:x}", self.prefix(), self.address()),
             BusType::MDIO => format!("{}-mdio-{:x}", self.prefix(), self.address()),
+            BusType::SCSI => format!(
+                "{}-scsi-{}-{:x}",
+                self.prefix(),
+                self.bus.number(),
+                self.address()
+            ),
             BusType::Virtual => format!("{}-virtual-{:x}", self.prefix(), self.address()),
         }
     }
@@ -241,6 +247,20 @@ fn get_chip_bus_from_name(
             address = (_domain << 16) + (_bus << 8) + (_slot << 3) + _fn;
             bus_type = BusType::PCI;
             bus_number = 0;
+        }
+        "scsi" => {
+            let args: Vec<&str> = device_name.split(':').collect();
+
+            let _bus = u32::from_str(args.get(1).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?)?;
+            let _slot = u32::from_str(args.get(2).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?)?;
+            let _fn = u32::from_str_radix(
+                args.get(3).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?,
+                16,
+            )?;
+
+            address = (_bus << 8) + (_slot << 4) + _fn;
+            bus_number = i16::from_str(args.get(0).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?)?;
+            bus_type = BusType::SCSI;
         }
         "platform" | "of_platform" => {
             bus_type = BusType::ISA;

@@ -24,6 +24,7 @@ pub enum BusType {
     ACPI,
     HID,
     MDIO,
+    SCSI,
 }
 
 impl fmt::Display for BusType {
@@ -37,6 +38,7 @@ impl fmt::Display for BusType {
             BusType::ACPI => write!(f, "ACPI"),
             BusType::HID => write!(f, "HID"),
             BusType::MDIO => write!(f, "MDIO"),
+            BusType::SCSI => write!(f, "SCSI"),
         }
     }
 }
@@ -81,6 +83,7 @@ impl Bus {
             // HID buses have a name nor where to find it.
             BusType::HID => Some("HID adapter"),
             BusType::MDIO => Some("MDIO adapter"),
+            BusType::SCSI => Some("SCSI adapter"),
             // Bus types with several instances
             BusType::I2C => {
                 for adapter in self.context.adapters().iter() {
