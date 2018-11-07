@@ -33,7 +33,7 @@ macro_rules! decl_subfeatures {
             }
 
             /// Return `true` if the subfeature variant is an alarm.
-            pub fn alarm(self) -> bool {
+            pub fn is_alarm(self) -> bool {
                 match self {
                     $($SfName::$Variant => $alarm,)*
                 }
@@ -209,16 +209,16 @@ impl SubfeatureType {
     }
 
     /// Return `true` if the subfeature variant is an alarm.
-    pub fn alarm(self) -> bool {
+    pub fn is_alarm(self) -> bool {
         match self {
-            SubfeatureType::Fan(sft) => sft.alarm(),
-            SubfeatureType::Temperature(sft) => sft.alarm(),
-            SubfeatureType::Voltage(sft) => sft.alarm(),
-            SubfeatureType::Current(sft) => sft.alarm(),
-            SubfeatureType::Power(sft) => sft.alarm(),
-            SubfeatureType::Energy(sft) => sft.alarm(),
-            SubfeatureType::Humidity(sft) => sft.alarm(),
-            SubfeatureType::Intrusion(sft) => sft.alarm(),
+            SubfeatureType::Fan(sft) => sft.is_alarm(),
+            SubfeatureType::Temperature(sft) => sft.is_alarm(),
+            SubfeatureType::Voltage(sft) => sft.is_alarm(),
+            SubfeatureType::Current(sft) => sft.is_alarm(),
+            SubfeatureType::Power(sft) => sft.is_alarm(),
+            SubfeatureType::Energy(sft) => sft.is_alarm(),
+            SubfeatureType::Humidity(sft) => sft.is_alarm(),
+            SubfeatureType::Intrusion(sft) => sft.is_alarm(),
             SubfeatureType::Cpu => false,
             SubfeatureType::BeepEnable => false,
         }

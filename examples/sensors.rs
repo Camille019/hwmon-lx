@@ -187,13 +187,11 @@ fn get_sensor_limit_data(
     alarms: &mut Vec<SubfeatureData>,
 ) {
     for sfl in sfl_vec.iter() {
-        //        println!("sf: {:?}", sfl);
         if let Some(value) = feature
             .subfeature(sfl.sf_type)
             .and_then(|sf| sf.read_value().ok())
         {
-            //            println!("sf value: {:?}", value);
-            if sfl.sf_type.alarm() {
+            if sfl.sf_type.is_alarm() {
                 // Only queue alarm subfeatures if the alarm
                 // is active, and don't store the alarm value
                 // (it is implied to be active if queued).
