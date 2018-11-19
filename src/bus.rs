@@ -97,7 +97,7 @@ impl Bus {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct BusAdapter {
     name: String,
     bus_type: BusType,
@@ -176,4 +176,25 @@ pub(crate) fn read_sysfs_busses() -> Result<Vec<BusAdapter>, Error> {
     }
 
     Ok(res)
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn bus_adapter_from_sysfs_i2c_legacy_isa() {
+        use std;
+        use super::BusAdapter;
+
+        let path = std::path::PathBuf::from("/sys/class/i2c-adapter/i2c-9191/");
+        assert_eq!(BusAdapter::from_sysfs_i2c(path.as_path()).unwrap(), None);
+
+        let path = std::path::PathBuf::from("/sys/bus/i2c/devices/i2c-9191/");
+        assert_eq!(BusAdapter::from_sysfs_i2c(path.as_path()).unwrap(), None);
+
+        let path = std::path::PathBuf::from("/sys/class/i2c-adapter/i2c-0/");
+        assert_ne!(BusAdapter::from_sysfs_i2c(path.as_path()).unwrap(), None);
+
+        let path = std::path::PathBuf::from("/sys/class/i2c-adapter/i2c-0/");
+        assert_ne!(BusAdapter::from_sysfs_i2c(path.as_path()).unwrap(), None);
+    }
 }
