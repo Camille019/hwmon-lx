@@ -845,9 +845,7 @@ fn print_feature_beep_enable(feature: &Feature, label_length: usize) {
 fn print_chip(chip: &Chip) {
     let label_length = get_label_length(chip);
 
-    let mut features = chip.features_iter().collect::<Vec<&Feature>>();
-    features.sort_by(|a, b| a.get_type().cmp(&b.get_type()).then(a.name().cmp(b.name())));
-    for feature in features.iter() {
+    for feature in chip.features_iter() {
         match feature.get_type() {
             FeatureType::Fan => print_feature_fan(feature, label_length),
             FeatureType::Temperature => print_feature_temp(feature, label_length),

@@ -2,8 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std;
-use std::collections::HashMap;
+use std::collections::btree_map;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -16,7 +15,7 @@ use subfeature::Subfeature;
 use sysfs::*;
 
 pub struct FeatureIter<'a> {
-    inner: std::collections::hash_map::Values<'a, (FeatureType, u32), Feature>,
+    inner: btree_map::Values<'a, (FeatureType, u32), Feature>,
 }
 
 impl<'a> Iterator for FeatureIter<'a> {
@@ -32,7 +31,7 @@ pub struct Chip {
     prefix: String,
     bus: Bus,
     address: u32,
-    features: HashMap<(FeatureType, u32), Feature>,
+    features: btree_map::BTreeMap<(FeatureType, u32), Feature>,
 }
 
 impl Chip {
