@@ -2,20 +2,20 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std;
 use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::os::linux::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
+use lazy_static::lazy_static;
 use libc;
 use ratio::{self, Rational};
 use regex::Regex;
 
-use error::*;
-use feature::FeatureType;
-use sysfs::*;
+use crate::error::*;
+use crate::feature::FeatureType;
+use crate::sysfs::*;
 
 macro_rules! decl_subfeatures {
     (($SfName:ident, $MAP_NAME:ident) [ $($Variant:ident { $pattern:expr, $ratio:ident, $alarm:expr}),* $(,)* ]) => {

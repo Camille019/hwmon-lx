@@ -2,15 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#[macro_use]
-extern crate lazy_static;
-
-extern crate hwmonlx;
-
 use std::alloc::System;
 
 use hwmonlx::subfeature::*;
 use hwmonlx::{Chip, Feature, FeatureType, SubfeatureType};
+
+use lazy_static::lazy_static;
 
 #[global_allocator]
 static GLOBAL: System = System;
@@ -103,8 +100,8 @@ fn get_label_length(chip: &Chip) -> usize {
         }
     }
 
-    /* One more for the colon, and one more to guarantee at least one
-	   space between that colon and the value */
+    // One more for the colon, and one more to guarantee at least one
+    // space between that colon and the value */
     max_len + 2
 }
 

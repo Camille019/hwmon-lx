@@ -7,7 +7,7 @@ use std::fmt;
 use std::io;
 use std::num;
 
-use bus::BusType;
+use crate::bus::BusType;
 
 #[derive(Debug)]
 pub enum Error {

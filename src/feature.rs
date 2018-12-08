@@ -6,9 +6,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::slice;
 
-use error::*;
-use subfeature::{Subfeature, SubfeatureType};
-use sysfs;
+use crate::error::*;
+use crate::subfeature::{Subfeature, SubfeatureType};
+use crate::sysfs;
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum FeatureType {
@@ -135,7 +135,7 @@ impl Feature {
     /// Return `None` if
     pub(crate) fn push_subfeature(&mut self, subfeature: Subfeature) -> Result<(), FeatureError> {
         if FeatureType::from(subfeature.get_type()) == self.feature_type {
-            debug!(
+            log::debug!(
                 "Add subfeature '{}' to feature '{}'",
                 subfeature.name(),
                 self.name()

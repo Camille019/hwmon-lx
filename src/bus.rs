@@ -7,9 +7,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use context::Context;
-use error::*;
-use sysfs::*;
+use crate::context::Context;
+use crate::error::*;
+use crate::sysfs::*;
 
 #[allow(non_snake_case)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -109,7 +109,7 @@ impl BusAdapter {
         let classdev = path.file_name().and_then(|s| s.to_str()).unwrap();
 
         let prefix = "i2c-";
-        if !classdev.starts_with(prefix) || !(classdev.len() > prefix.len()) {
+        if !classdev.starts_with(prefix) || (classdev.len() <= prefix.len()) {
             return Err(Error::ParseBusName(BusType::I2C));
         }
         let (_, digits) = classdev.split_at(prefix.len());
@@ -182,7 +182,6 @@ pub(crate) fn read_sysfs_busses() -> Result<Vec<BusAdapter>, Error> {
 mod tests {
     #[test]
     fn bus_adapter_from_sysfs_i2c_legacy_isa() {
-        use std;
         use super::BusAdapter;
 
         let path = std::path::PathBuf::from("/sys/class/i2c-adapter/i2c-9191/");

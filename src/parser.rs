@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use pest::Parser;
+use pest_derive::Parser;
 
 #[derive(Parser)]
 #[grammar = "conf.pest"]

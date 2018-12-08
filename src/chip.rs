@@ -7,12 +7,12 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use bus::{Bus, BusType};
-use context::Context;
-use error::*;
-use feature::{Feature, FeatureType};
-use subfeature::Subfeature;
-use sysfs::*;
+use crate::bus::{Bus, BusType};
+use crate::context::Context;
+use crate::error::*;
+use crate::feature::{Feature, FeatureType};
+use crate::subfeature::Subfeature;
+use crate::sysfs::*;
 
 pub struct FeatureIter<'a> {
     inner: btree_map::Values<'a, (FeatureType, u32), Feature>,
@@ -152,7 +152,8 @@ impl Chip {
                     .file_type()
                     .map(|ftype| ftype.is_file())
                     .unwrap_or(false)
-            }) {
+            })
+        {
             let path = entry.path();
 
             if let Ok((feature_number, subfeature)) = Subfeature::from_path(&path) {
@@ -165,7 +166,7 @@ impl Chip {
                     .push_subfeature(subfeature)
                     .unwrap();
             } else {
-                debug!("Skip file {:?}", &path);
+                log::debug!("Skip file {:?}", &path);
             }
         }
 
@@ -189,7 +190,10 @@ fn get_chip_bus_from_name(
             let args: Vec<&str> = device_name.split('-').collect();
 
             bus_number = i16::from_str(args.get(0).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?)?;
-            address = u32::from_str_radix(args.get(1).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?, 16)?;
+            address = u32::from_str_radix(
+                args.get(1).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?,
+                16,
+            )?;
 
             // find out if legacy ISA or not
             if bus_number == 9191 {
@@ -214,7 +218,7 @@ fn get_chip_bus_from_name(
             // Device name Regex "^spi[[:digit:]]+\.[[:digit:]]+$"
 
             let prefix = "spi";
-            if !device_name.starts_with(prefix) || !(device_name.len() > prefix.len()) {
+            if !device_name.starts_with(prefix) || (device_name.len() <= prefix.len()) {
                 return Err(ChipError::ParseBusInfo(BusType::SPI));
             }
             let (_, end) = device_name.split_at(prefix.len());
@@ -228,12 +232,32 @@ fn get_chip_bus_from_name(
             // Device name Regex: "^[[:xdigit:]]+:[[:xdigit:]]+:[[:xdigit:]]+\.[[:xdigit:]]+$"
 
             let args: Vec<&str> = device_name.split(':').collect();
-            let args_bis: Vec<&str> = args.last().ok_or(ChipError::ParseBusInfo(BusType::PCI))?.split('.').collect();
+            let args_bis: Vec<&str> = args
+                .last()
+                .ok_or(ChipError::ParseBusInfo(BusType::PCI))?
+                .split('.')
+                .collect();
 
-            let _domain = u32::from_str_radix(args.get(0).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?, 16)?;
-            let _bus = u32::from_str_radix(args.get(1).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?, 16)?;
-            let _slot = u32::from_str_radix(args_bis.get(0).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?, 16)?;
-            let _fn = u32::from_str_radix(args_bis.get(1).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?, 16)?;
+            let _domain = u32::from_str_radix(
+                args.get(0).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?,
+                16,
+            )?;
+            let _bus = u32::from_str_radix(
+                args.get(1).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?,
+                16,
+            )?;
+            let _slot = u32::from_str_radix(
+                args_bis
+                    .get(0)
+                    .ok_or(ChipError::ParseBusInfo(BusType::SCSI))?,
+                16,
+            )?;
+            let _fn = u32::from_str_radix(
+                args_bis
+                    .get(1)
+                    .ok_or(ChipError::ParseBusInfo(BusType::SCSI))?,
+                16,
+            )?;
 
             address = (_domain << 16) + (_bus << 8) + (_slot << 3) + _fn;
             bus_type = BusType::PCI;
@@ -294,25 +318,25 @@ pub fn read_sysfs_chips(context: &Context) -> Result<Vec<Chip>, Error> {
         let mut link_path = path.clone();
         link_path.push("device");
         let chip = if link_path.read_link().is_ok() {
-            debug!("{:?}.read_link() -> Ok", link_path);
+            log::debug!("{:?}.read_link() -> Ok", link_path);
 
             // The attributes we want might be those of the hwmon class
             // device, or those of the device itself.
             match Chip::from_path(path.as_ref(), link_path.as_ref(), context) {
                 Ok(chip) => Ok(chip),
                 Err(e) => {
-                    debug!("{:?}", e);
+                    log::debug!("{:?}", e);
                     Chip::from_path(link_path.as_ref(), link_path.as_ref(), context)
                 }
             }
         } else {
             // No device link? Treat as virtual
-            debug!("{:?}.read_link() -> Err", link_path);
+            log::debug!("{:?}.read_link() -> Err", link_path);
             Chip::from_path(path.as_ref(), None, context)
         };
 
         if let Ok(chip) = chip {
-            debug!("Add chip '{}'", chip.name());
+            log::debug!("Add chip '{}'", chip.name());
             chips.push(chip);
         }
     }

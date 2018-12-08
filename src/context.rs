@@ -5,8 +5,8 @@
 use std::path::Path;
 use std::rc::Rc;
 
-use bus::{self, BusAdapter};
-use error::*;
+use crate::bus::{self, BusAdapter};
+use crate::error::*;
 
 #[derive(Clone)]
 pub struct Context {

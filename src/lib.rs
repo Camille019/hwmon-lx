@@ -11,20 +11,8 @@ mod parser;
 pub mod subfeature;
 mod sysfs;
 
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate pest_derive;
-
-extern crate libc;
-extern crate pest;
-extern crate ratio;
-extern crate regex;
-
-pub use bus::{Bus, BusType};
-pub use chip::{read_sysfs_chips, Chip, FeatureIter};
-pub use context::Context;
-pub use feature::{Feature, FeatureType, SubfeatureIter};
-pub use subfeature::{Subfeature, SubfeatureType};
+pub use crate::bus::{Bus, BusType};
+pub use crate::chip::{read_sysfs_chips, Chip, FeatureIter};
+pub use crate::context::Context;
+pub use crate::feature::{Feature, FeatureType, SubfeatureIter};
+pub use crate::subfeature::{Subfeature, SubfeatureType};

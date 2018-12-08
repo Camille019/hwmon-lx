@@ -2,6 +2,7 @@
 name = "hwmonlx"
 version = "0.1.0"
 authors = ["Camille019"]
+edition = "2018"
 license = "MPL-2.0"
 description = "A Rust interface to Linux hwmon sysfs interface"
 keywords = ["sensor", "hwmon", "Linux"]
