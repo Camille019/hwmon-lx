@@ -12,7 +12,7 @@ pub fn sysfs_read_file(path: &Path) -> io::Result<String> {
     let mut file = OpenOptions::new().read(true).write(false).open(path)?;
     let mut buf: String = String::new();
     file.read_to_string(&mut buf)?;
-    let len = buf.trim_right().len();
+    let len = buf.trim_end().len();
     buf.truncate(len);
 
     Ok(buf)
