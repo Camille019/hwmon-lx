@@ -285,94 +285,63 @@ fn print_feature_fan(feature: &Feature, label_length: usize) {
     println!();
 }
 
-lazy_static! {
-    static ref TEMP_SENSORS: Vec<SubfeatureList> = vec![
+macro_rules! make_sflist_item {
+    (feature: $Feature:ident, properties: { $SfType:ident } ) => {
         SubfeatureList {
-            sf_type: SubfeatureType::Temperature(Temperature::Alarm),
-            comp: Vec::new(),
+            sf_type: SubfeatureType::$Feature($Feature::$SfType),
             name: String::new(),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Temperature(Temperature::Crit_Min_Alarm),
             comp: Vec::new(),
-            name: String::from("LCRIT"),
-        },
+        }
+    };
+    (feature: $Feature:ident, properties: { $SfType:ident, $name:expr } ) => {
         SubfeatureList {
-            sf_type: SubfeatureType::Temperature(Temperature::Min_Alarm),
+            sf_type: SubfeatureType::$Feature($Feature::$SfType),
+            name: String::from($name),
             comp: Vec::new(),
-            name: String::from("LOW"),
-        },
+        }
+    };
+    (feature: $Feature:ident, properties: { $SfType:ident, $name:expr, $comp:tt }) => {
         SubfeatureList {
-            sf_type: SubfeatureType::Temperature(Temperature::Max_Alarm),
-            comp: Vec::new(),
-            name: String::from("HIGH"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Temperature(Temperature::Crit_Max_Alarm),
-            comp: Vec::new(),
-            name: String::from("CRIT"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Temperature(Temperature::Emergency_Alarm),
-            comp: Vec::new(),
-            name: String::from("EMERGENCY"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Temperature(Temperature::Min),
-            comp: vec![SubfeatureList {
-                sf_type: SubfeatureType::Temperature(Temperature::Min_Hyst),
-                comp: Vec::new(),
-                name: String::from(HYST_STR),
-            }],
-            name: String::from("low"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Temperature(Temperature::Max),
-            comp: vec![SubfeatureList {
-                sf_type: SubfeatureType::Temperature(Temperature::Max_Hyst),
-                comp: Vec::new(),
-                name: String::from(HYST_STR),
-            }],
-            name: String::from("high"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Temperature(Temperature::Crit_Min),
-            comp: vec![SubfeatureList {
-                sf_type: SubfeatureType::Temperature(Temperature::Crit_Min_Hyst),
-                comp: Vec::new(),
-                name: String::from(HYST_STR),
-            }],
-            name: String::from("crit low"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Temperature(Temperature::Crit_Max),
-            comp: vec![SubfeatureList {
-                sf_type: SubfeatureType::Temperature(Temperature::Crit_Max_Hyst),
-                comp: Vec::new(),
-                name: String::from(HYST_STR),
-            }],
-            name: String::from("crit"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Temperature(Temperature::Emergency),
-            comp: vec![SubfeatureList {
-                sf_type: SubfeatureType::Temperature(Temperature::Emergency_Hyst),
-                comp: Vec::new(),
-                name: String::from(HYST_STR),
-            }],
-            name: String::from("emerg"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Temperature(Temperature::Lowest),
-            comp: Vec::new(),
-            name: String::from("lowest"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Temperature(Temperature::Highest),
-            comp: Vec::new(),
-            name: String::from("highest"),
-        },
-    ];
+            sf_type: SubfeatureType::$Feature($Feature::$SfType),
+            name: String::from($name),
+            comp: make_sflist! {
+                feature: $Feature,
+                list = $comp
+            },
+        }
+    };
+}
+
+macro_rules! make_sflist {
+    (feature: $Feature:ident, list = [ $($properties:tt),* $(,)* ] ) => {
+        vec![
+            $(make_sflist_item!{
+                feature: $Feature,
+                properties: $properties
+            },)*
+        ];
+    };
+}
+
+lazy_static! {
+    static ref TEMP_SENSORS: Vec<SubfeatureList> = make_sflist! {
+        feature: Temperature,
+        list = [
+            { Alarm },
+            { Crit_Min_Alarm, "LCRIT" },
+            { Min_Alarm, "LOW" },
+            { Max_Alarm, "HIGH" },
+            { Crit_Max_Alarm, "CRIT" },
+            { Emergency_Alarm, "EMERGENCY" },
+            { Min, "low", [ {Min_Hyst, HYST_STR} ] },
+            { Max, "high", [ {Max_Hyst, HYST_STR} ] },
+            { Crit_Min, "crit low", [ {Crit_Min_Hyst, HYST_STR} ] },
+            { Crit_Max, "crit", [ {Crit_Max_Hyst, HYST_STR} ] },
+            { Emergency, "emerg" , [ {Emergency_Hyst, HYST_STR} ] },
+            { Lowest, "lowest" },
+            { Highest, "highest" },
+        ]
+    };
 }
 
 fn print_feature_temp(feature: &Feature, label_length: usize) {
@@ -434,68 +403,23 @@ fn print_feature_temp(feature: &Feature, label_length: usize) {
 }
 
 lazy_static! {
-    static ref VOLTAGE_SENSORS: Vec<SubfeatureList> = vec![
-        SubfeatureList {
-            sf_type: SubfeatureType::Voltage(Voltage::Alarm),
-            comp: Vec::new(),
-            name: String::new(),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Voltage(Voltage::Crit_Min_Alarm),
-            comp: Vec::new(),
-            name: String::from("LCRIT"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Voltage(Voltage::Min_Alarm),
-            comp: Vec::new(),
-            name: String::from("MIN"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Voltage(Voltage::Max_Alarm),
-            comp: Vec::new(),
-            name: String::from("MAX"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Voltage(Voltage::Crit_Max_Alarm),
-            comp: Vec::new(),
-            name: String::from("CRIT"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Voltage(Voltage::Crit_Min),
-            comp: Vec::new(),
-            name: String::from("crit min"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Voltage(Voltage::Min),
-            comp: Vec::new(),
-            name: String::from("min"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Voltage(Voltage::Max),
-            comp: Vec::new(),
-            name: String::from("max"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Voltage(Voltage::Crit_Max),
-            comp: Vec::new(),
-            name: String::from("crit max"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Voltage(Voltage::Average),
-            comp: Vec::new(),
-            name: String::from("avg"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Voltage(Voltage::Lowest),
-            comp: Vec::new(),
-            name: String::from("lowest"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Voltage(Voltage::Highest),
-            comp: Vec::new(),
-            name: String::from("highest"),
-        },
-    ];
+    static ref VOLTAGE_SENSORS: Vec<SubfeatureList> = make_sflist! {
+        feature: Voltage,
+        list = [
+            { Alarm },
+            { Crit_Min_Alarm, "LCRIT" },
+            { Min_Alarm, "MIN" },
+            { Max_Alarm, "MAX" },
+            { Crit_Max_Alarm, "CRIT" },
+            { Crit_Min, "crit min" },
+            { Min, "min" },
+            { Max, "max" },
+            { Crit_Max, "crit max" },
+            { Average, "avg" },
+            { Lowest, "lowest" },
+            { Highest, "highest" },
+        ]
+    };
 }
 
 fn print_feature_volt(feature: &Feature, label_length: usize) {
@@ -523,68 +447,23 @@ fn print_feature_volt(feature: &Feature, label_length: usize) {
 }
 
 lazy_static! {
-    static ref CURRENT_SENSORS: Vec<SubfeatureList> = vec![
-        SubfeatureList {
-            sf_type: SubfeatureType::Current(Current::Alarm),
-            comp: Vec::new(),
-            name: String::new(),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Current(Current::Crit_Min_Alarm),
-            comp: Vec::new(),
-            name: String::from("LCRIT"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Current(Current::Min_Alarm),
-            comp: Vec::new(),
-            name: String::from("MIN"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Current(Current::Max_Alarm),
-            comp: Vec::new(),
-            name: String::from("MAX"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Current(Current::Crit_Max_Alarm),
-            comp: Vec::new(),
-            name: String::from("CRIT"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Current(Current::Crit_Min),
-            comp: Vec::new(),
-            name: String::from("crit min"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Current(Current::Min),
-            comp: Vec::new(),
-            name: String::from("min"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Current(Current::Max),
-            comp: Vec::new(),
-            name: String::from("max"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Current(Current::Crit_Max),
-            comp: Vec::new(),
-            name: String::from("crit max"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Current(Current::Average),
-            comp: Vec::new(),
-            name: String::from("avg"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Current(Current::Lowest),
-            comp: Vec::new(),
-            name: String::from("lowest"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Current(Current::Highest),
-            comp: Vec::new(),
-            name: String::from("highest"),
-        },
-    ];
+    static ref CURRENT_SENSORS: Vec<SubfeatureList> = make_sflist! {
+        feature: Current,
+        list = [
+            { Alarm },
+            { Crit_Min_Alarm, "LCRIT" },
+            { Min_Alarm, "MIN" },
+            { Max_Alarm, "MAX" },
+            { Crit_Max_Alarm, "CRIT" },
+            { Crit_Min, "crit min" },
+            { Min, "min" },
+            { Max, "max" },
+            { Crit_Max, "crit max" },
+            { Average, "avg" },
+            { Lowest, "lowest" },
+            { Highest, "highest" },
+        ]
+    };
 }
 
 fn print_feature_curr(feature: &Feature, label_length: usize) {
@@ -612,112 +491,41 @@ fn print_feature_curr(feature: &Feature, label_length: usize) {
 }
 
 lazy_static! {
-    static ref POWER_COMMON_SENSORS: Vec<SubfeatureList> = vec![
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Alarm),
-            comp: Vec::new(),
-            name: String::new(),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Min_Alarm),
-            comp: Vec::new(),
-            name: String::from("MIN"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Max_Alarm),
-            comp: Vec::new(),
-            name: String::from("MAX"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Crit_Min_Alarm),
-            comp: Vec::new(),
-            name: String::from("LCRIT"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Crit_Max_Alarm),
-            comp: Vec::new(),
-            name: String::from("CRIT"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Cap_Alarm),
-            comp: Vec::new(),
-            name: String::from("CAP"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Max),
-            comp: Vec::new(),
-            name: String::from("max"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Min),
-            comp: Vec::new(),
-            name: String::from("min"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Crit_Min),
-            comp: Vec::new(),
-            name: String::from("lcrit"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Crit_Max),
-            comp: Vec::new(),
-            name: String::from("crit"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Cap),
-            comp: Vec::new(),
-            name: String::from("cap"),
-        },
-    ];
-    static ref POWER_INST_SENSORS: Vec<SubfeatureList> = vec![
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Input_Lowest),
-            comp: Vec::new(),
-            name: String::from("lowest"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Input_Highest),
-            comp: Vec::new(),
-            name: String::from("highest"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Average),
-            comp: Vec::new(),
-            name: String::from("avg"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Average_Lowest),
-            comp: Vec::new(),
-            name: String::from("avg lowest"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Average_Highest),
-            comp: Vec::new(),
-            name: String::from("avg highest"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Average_Interval),
-            comp: Vec::new(),
-            name: String::from("interval"),
-        },
-    ];
-    static ref POWER_AVG_SENSORS: Vec<SubfeatureList> = vec![
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Average_Lowest),
-            comp: Vec::new(),
-            name: String::from("lowest"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Average_Highest),
-            comp: Vec::new(),
-            name: String::from("highest"),
-        },
-        SubfeatureList {
-            sf_type: SubfeatureType::Power(Power::Average_Interval),
-            comp: Vec::new(),
-            name: String::from("interval"),
-        },
-    ];
+    static ref POWER_COMMON_SENSORS: Vec<SubfeatureList> = make_sflist! {
+        feature: Power,
+        list = [
+            { Alarm },
+            { Min_Alarm, "MIN" },
+            { Max_Alarm, "MAX" },
+            { Crit_Min_Alarm, "LCRIT" },
+            { Crit_Max_Alarm, "CRIT" },
+            { Cap_Alarm, "CAP" },
+            { Max, "max" },
+            { Min, "min" },
+            { Crit_Min, "lcrit" },
+            { Crit_Max, "crit" },
+            { Cap, "cap" },
+        ]
+    };
+    static ref POWER_INST_SENSORS: Vec<SubfeatureList> = make_sflist! {
+        feature: Power,
+        list = [
+            { Input_Lowest, "lowest" },
+            { Input_Highest, "highest" },
+            { Average, "avg" },
+            { Average_Lowest, "avg lowest" },
+            { Average_Highest, "avg highest" },
+            { Average_Interval, "interval" },
+        ]
+    };
+    static ref POWER_AVG_SENSORS: Vec<SubfeatureList> = make_sflist! {
+        feature: Power,
+        list = [
+            { Average_Lowest, "lowest" },
+            { Average_Highest, "highest" },
+            { Average_Interval, "interval" },
+        ]
+    };
 }
 
 fn print_feature_power(feature: &Feature, label_length: usize) {
