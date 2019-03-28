@@ -17,25 +17,25 @@ use crate::error::*;
 use crate::feature::FeatureType;
 use crate::sysfs::*;
 
-macro_rules! decl_subfeatures {
-    (($SfName:ident, $MAP_NAME:ident) [ $($Variant:ident { $pattern:expr, $ratio:ident, $alarm:expr}),* $(,)* ]) => {
+macro_rules! make_subfeatures {
+    (feature: $Feature:ident, map: $MAP_NAME:ident, variants: [ $($Variant:ident { $pattern:expr, $ratio:ident, $alarm:expr}),* $(,)* ]) => {
         #[allow(non_camel_case_types)]
         #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
-        pub enum $SfName {
+        pub enum $Feature {
             $($Variant),*
         }
 
-        impl $SfName {
+        impl $Feature {
             fn scale(self) -> f64 {
                 match self {
-                    $($SfName::$Variant => (ratio::$ratio::DENOM as f64) / (ratio::$ratio::NUM as f64),)*
+                    $($Feature::$Variant => (ratio::$ratio::DENOM as f64) / (ratio::$ratio::NUM as f64),)*
                 }
             }
 
             /// Return `true` if the subfeature variant is an alarm.
             pub fn is_alarm(self) -> bool {
                 match self {
-                    $($SfName::$Variant => $alarm,)*
+                    $($Feature::$Variant => $alarm,)*
                 }
             }
         }
@@ -43,7 +43,7 @@ macro_rules! decl_subfeatures {
         lazy_static! {
             static ref $MAP_NAME: HashMap<&'static str, SubfeatureType> = {
                 let mut m = HashMap::new();
-                $(m.insert($pattern, SubfeatureType::$SfName($SfName::$Variant));)*
+                $(m.insert($pattern, SubfeatureType::$Feature($Feature::$Variant));)*
                 m.shrink_to_fit();
                 m
             };
@@ -51,124 +51,156 @@ macro_rules! decl_subfeatures {
     }
 }
 
-decl_subfeatures!((Fan, FAN_MAP) [
-    Input { "input", Unity, false },
-    Min { "min", Unity, false },
-    Max { "max", Unity, false },
-    Div { "div", Unity, false },
-    Pulses { "pulses", Unity, false },
-    Target { "target", Unity, false },
-    // Alarms
-    Alarm { "alarm", Unity, true },
-    Min_Alarm { "min_alarm", Unity, true },
-    Max_Alarm { "max_alarm", Unity, true },
-    Fault { "fault", Unity, false },
-    Beep { "beep", Unity, false },
-]);
+make_subfeatures!{
+    feature: Fan,
+    map: FAN_MAP,
+    variants: [
+        Input { "input", Unity, false },
+        Min { "min", Unity, false },
+        Max { "max", Unity, false },
+        Div { "div", Unity, false },
+        Pulses { "pulses", Unity, false },
+        Target { "target", Unity, false },
+        // Alarms
+        Alarm { "alarm", Unity, true },
+        Min_Alarm { "min_alarm", Unity, true },
+        Max_Alarm { "max_alarm", Unity, true },
+        Fault { "fault", Unity, false },
+        Beep { "beep", Unity, false },
+    ]
+}
 
-decl_subfeatures!((Temperature, TEMPERATURE_MAP) [
-    Input { "input", Milli, false },
-    Max { "max", Milli, false },
-    Max_Hyst { "max_hyst", Milli, false },
-    Min { "min", Milli, false },
-    Min_Hyst { "min_hyst", Milli, false },
-    Crit_Max { "crit", Milli, false },
-    Crit_Max_Hyst { "crit_hyst", Milli, false },
-    Crit_Min { "lcrit", Milli, false },
-    Crit_Min_Hyst { "lcrit_hyst", Milli, false },
-    Emergency { "emergency", Milli, false },
-    Emergency_Hyst { "emergency_hyst", Milli, false },
-    Lowest { "lowest", Milli, false },
-    Highest { "highest", Milli, false },
-    Offset { "offset", Milli, false },
-    Type { "type", Unity, false },
-    // Alarms
-    Alarm { "alarm", Unity, true },
-    Max_Alarm { "max_alarm", Unity, true },
-    Min_Alarm { "min_alarm", Unity, true },
-    Emergency_Alarm { "emergency_alarm", Unity, true },
-    Crit_Max_Alarm { "crit_alarm", Unity, true },
-    Crit_Min_Alarm { "lcrit_alarm", Unity, true },
-    Fault { "fault", Unity, false },
-    Beep { "beep", Unity, false },
-]);
+make_subfeatures!{
+    feature: Temperature,
+    map: TEMPERATURE_MAP,
+    variants: [
+        Input { "input", Milli, false },
+        Max { "max", Milli, false },
+        Max_Hyst { "max_hyst", Milli, false },
+        Min { "min", Milli, false },
+        Min_Hyst { "min_hyst", Milli, false },
+        Crit_Max { "crit", Milli, false },
+        Crit_Max_Hyst { "crit_hyst", Milli, false },
+        Crit_Min { "lcrit", Milli, false },
+        Crit_Min_Hyst { "lcrit_hyst", Milli, false },
+        Emergency { "emergency", Milli, false },
+        Emergency_Hyst { "emergency_hyst", Milli, false },
+        Lowest { "lowest", Milli, false },
+        Highest { "highest", Milli, false },
+        Offset { "offset", Milli, false },
+        Type { "type", Unity, false },
+        // Alarms
+        Alarm { "alarm", Unity, true },
+        Max_Alarm { "max_alarm", Unity, true },
+        Min_Alarm { "min_alarm", Unity, true },
+        Emergency_Alarm { "emergency_alarm", Unity, true },
+        Crit_Max_Alarm { "crit_alarm", Unity, true },
+        Crit_Min_Alarm { "lcrit_alarm", Unity, true },
+        Fault { "fault", Unity, false },
+        Beep { "beep", Unity, false },
+    ]
+}
 
-decl_subfeatures!((Voltage, VOLTAGE_MAP) [
-    Input { "input", Milli, false },
-    Max { "max", Milli, false },
-    Min { "min", Milli, false },
-    Crit_Max { "crit", Milli, false },
-    Crit_Min { "lcrit", Milli, false },
-    Average { "average", Milli, false },
-    Highest { "highest", Milli, false },
-    Lowest { "lowest", Milli, false },
-    // Alarms
-    Alarm { "alarm", Unity, true },
-    Max_Alarm { "max_alarm", Unity, true },
-    Min_Alarm { "min_alarm", Unity, true },
-    Crit_Max_Alarm { "crit_alarm", Unity, true },
-    Crit_Min_Alarm { "lcrit_alarm", Unity, true },
-    Beep { "beep", Unity, false },
-]);
+make_subfeatures!{
+    feature: Voltage,
+    map: VOLTAGE_MAP,
+    variants: [
+        Input { "input", Milli, false },
+        Max { "max", Milli, false },
+        Min { "min", Milli, false },
+        Crit_Max { "crit", Milli, false },
+        Crit_Min { "lcrit", Milli, false },
+        Average { "average", Milli, false },
+        Highest { "highest", Milli, false },
+        Lowest { "lowest", Milli, false },
+        // Alarms
+        Alarm { "alarm", Unity, true },
+        Max_Alarm { "max_alarm", Unity, true },
+        Min_Alarm { "min_alarm", Unity, true },
+        Crit_Max_Alarm { "crit_alarm", Unity, true },
+        Crit_Min_Alarm { "lcrit_alarm", Unity, true },
+        Beep { "beep", Unity, false },
+    ]
+}
 
-decl_subfeatures!((Current, CURRENT_MAP) [
-    Input { "input", Milli, false },
-    Max { "max", Milli, false },
-    Min { "min", Milli, false },
-    Crit_Max { "crit", Milli, false },
-    Crit_Min { "lcrit", Milli, false },
-    Average { "average", Milli, false },
-    Highest { "highest", Milli, false },
-    Lowest { "lowest", Milli, false },
-    // Alarms
-    Alarm { "alarm", Unity, true },
-    Max_Alarm { "max_alarm", Unity, true },
-    Min_Alarm { "min_alarm", Unity, true },
-    Crit_Max_Alarm { "crit_alarm", Unity, true },
-    Crit_Min_Alarm { "lcrit_alarm", Unity, true },
-    Beep { "beep", Unity, false },
-]);
+make_subfeatures!{
+    feature: Current,
+    map: CURRENT_MAP,
+    variants: [
+        Input { "input", Milli, false },
+        Max { "max", Milli, false },
+        Min { "min", Milli, false },
+        Crit_Max { "crit", Milli, false },
+        Crit_Min { "lcrit", Milli, false },
+        Average { "average", Milli, false },
+        Highest { "highest", Milli, false },
+        Lowest { "lowest", Milli, false },
+        // Alarms
+        Alarm { "alarm", Unity, true },
+        Max_Alarm { "max_alarm", Unity, true },
+        Min_Alarm { "min_alarm", Unity, true },
+        Crit_Max_Alarm { "crit_alarm", Unity, true },
+        Crit_Min_Alarm { "lcrit_alarm", Unity, true },
+        Beep { "beep", Unity, false },
+    ]
+}
 
-decl_subfeatures!((Power, POWER_MAP) [
-    Average { "average", Micro, false },
-    Average_Highest { "average_highest", Micro, false },
-    Average_Lowest { "average_lowest", Micro, false },
-    Input { "input", Micro, false },
-    Input_Highest { "input_highest", Micro, false },
-    Input_Lowest { "input_lowest", Micro, false },
-    Cap { "cap", Micro, false },
-    Cap_Max { "cap_max", Micro, false },
-    Cap_Min { "cap_min", Micro, false },
-    Cap_Hyst { "cap_hyst", Micro, false },
-    Max { "max", Micro, false },
-    Min { "min", Micro, false },
-    Crit_Max { "crit", Micro, false },
-    Crit_Min { "lcrit", Micro, false },
-    Average_Interval { "average_interval", Milli, false },
-    Average_Interval_Max { "average_interval_max", Milli, false },
-    Average_Interval_Min { "average_interval_min", Milli, false },
-    Accuracy { "accuracy", Unity, false },
-    // Alarms
-    Alarm { "alarm", Unity, true },
-    Cap_Alarm { "cap_alarm", Unity, true },
-    Max_Alarm { "max_alarm", Unity, true },
-    Min_Alarm { "min_alarm", Unity, true },
-    Crit_Max_Alarm { "crit_alarm", Unity, true },
-    Crit_Min_Alarm { "lcrit_alarm", Unity, true },
-]);
+make_subfeatures!{
+    feature: Power,
+    map: POWER_MAP,
+    variants: [
+        Average { "average", Micro, false },
+        Average_Highest { "average_highest", Micro, false },
+        Average_Lowest { "average_lowest", Micro, false },
+        Input { "input", Micro, false },
+        Input_Highest { "input_highest", Micro, false },
+        Input_Lowest { "input_lowest", Micro, false },
+        Cap { "cap", Micro, false },
+        Cap_Max { "cap_max", Micro, false },
+        Cap_Min { "cap_min", Micro, false },
+        Cap_Hyst { "cap_hyst", Micro, false },
+        Max { "max", Micro, false },
+        Min { "min", Micro, false },
+        Crit_Max { "crit", Micro, false },
+        Crit_Min { "lcrit", Micro, false },
+        Average_Interval { "average_interval", Milli, false },
+        Average_Interval_Max { "average_interval_max", Milli, false },
+        Average_Interval_Min { "average_interval_min", Milli, false },
+        Accuracy { "accuracy", Unity, false },
+        // Alarms
+        Alarm { "alarm", Unity, true },
+        Cap_Alarm { "cap_alarm", Unity, true },
+        Max_Alarm { "max_alarm", Unity, true },
+        Min_Alarm { "min_alarm", Unity, true },
+        Crit_Max_Alarm { "crit_alarm", Unity, true },
+        Crit_Min_Alarm { "lcrit_alarm", Unity, true },
+    ]
+}
 
-decl_subfeatures!((Energy, ENERGY_MAP) [
-    Input { "input", Micro, false },
-]);
+make_subfeatures!{
+    feature: Energy,
+    map: ENERGY_MAP,
+    variants: [
+        Input { "input", Micro, false },
+    ]
+}
 
-decl_subfeatures!((Humidity, HUMIDITY_MAP) [
-    Input { "input", Milli, false },
-]);
+make_subfeatures!{
+    feature: Humidity,
+    map: HUMIDITY_MAP,
+    variants: [
+        Input { "input", Milli, false },
+    ]
+}
 
-decl_subfeatures!((Intrusion, INTRUSION_MAP) [
-    Alarm { "alarm", Micro, false },
-    Beep { "beep", Micro, false },
-]);
+make_subfeatures!{
+    feature: Intrusion,
+    map: INTRUSION_MAP,
+    variants: [
+        Alarm { "alarm", Micro, false },
+        Beep { "beep", Micro, false },
+    ]
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum SubfeatureType {
