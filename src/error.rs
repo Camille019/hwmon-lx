@@ -128,6 +128,7 @@ impl fmt::Display for FeatureError {
 pub(crate) enum SubfeatureError {
     Io(io::Error),
     Invalid,
+    ParseInt(num::ParseIntError),
     Unknown,
 }
 
@@ -136,6 +137,7 @@ impl error::Error for SubfeatureError {
         match *self {
             SubfeatureError::Io(ref err) => Some(err),
             SubfeatureError::Invalid => None,
+            SubfeatureError::ParseInt(ref err) => Some(err),
             SubfeatureError::Unknown => None,
         }
     }
@@ -146,6 +148,7 @@ impl fmt::Display for SubfeatureError {
         match *self {
             SubfeatureError::Io(ref err) => write!(f, "IO error: {}", err),
             SubfeatureError::Invalid => write!(f, "Invalid subfeature"),
+            SubfeatureError::ParseInt(ref err) => write!(f, "ParseInt error: {}", err),
             SubfeatureError::Unknown => write!(f, "Unknown subfeature"),
         }
     }
@@ -154,5 +157,11 @@ impl fmt::Display for SubfeatureError {
 impl From<io::Error> for SubfeatureError {
     fn from(err: io::Error) -> SubfeatureError {
         SubfeatureError::Io(err)
+    }
+}
+
+impl From<num::ParseIntError> for SubfeatureError {
+    fn from(err: num::ParseIntError) -> SubfeatureError {
+        SubfeatureError::ParseInt(err)
     }
 }

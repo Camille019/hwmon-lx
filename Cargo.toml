@@ -14,7 +14,6 @@ libc = "0.2"
 pest = "2.1"
 pest_derive = "2.1"
 ratio = "0.0.0"
-regex = "1.1"
 log = "0.4"
 
 [dev-dependencies]

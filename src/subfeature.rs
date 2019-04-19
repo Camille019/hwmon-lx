@@ -8,11 +8,11 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::os::linux::fs::MetadataExt;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use lazy_static::lazy_static;
 use libc;
 use ratio::{self, Rational};
-use regex::Regex;
 
 use crate::error::*;
 use crate::feature::FeatureType;
@@ -52,7 +52,7 @@ macro_rules! make_subfeatures {
     }
 }
 
-make_subfeatures!{
+make_subfeatures! {
     feature: Fan,
     map: FAN_MAP,
     variants: [
@@ -71,7 +71,7 @@ make_subfeatures!{
     ]
 }
 
-make_subfeatures!{
+make_subfeatures! {
     feature: Temperature,
     map: TEMPERATURE_MAP,
     variants: [
@@ -102,7 +102,7 @@ make_subfeatures!{
     ]
 }
 
-make_subfeatures!{
+make_subfeatures! {
     feature: Voltage,
     map: VOLTAGE_MAP,
     variants: [
@@ -124,7 +124,7 @@ make_subfeatures!{
     ]
 }
 
-make_subfeatures!{
+make_subfeatures! {
     feature: Current,
     map: CURRENT_MAP,
     variants: [
@@ -146,7 +146,7 @@ make_subfeatures!{
     ]
 }
 
-make_subfeatures!{
+make_subfeatures! {
     feature: Power,
     map: POWER_MAP,
     variants: [
@@ -178,7 +178,7 @@ make_subfeatures!{
     ]
 }
 
-make_subfeatures!{
+make_subfeatures! {
     feature: Energy,
     map: ENERGY_MAP,
     variants: [
@@ -186,7 +186,7 @@ make_subfeatures!{
     ]
 }
 
-make_subfeatures!{
+make_subfeatures! {
     feature: Humidity,
     map: HUMIDITY_MAP,
     variants: [
@@ -194,7 +194,7 @@ make_subfeatures!{
     ]
 }
 
-make_subfeatures!{
+make_subfeatures! {
     feature: Intrusion,
     map: INTRUSION_MAP,
     variants: [
@@ -405,25 +405,25 @@ impl Subfeature {
             return Ok((0, SubfeatureType::BeepEnable));
         }
 
-        lazy_static! {
-            static ref RE: Regex = Regex::new(r"^(\D*)(\d+)_(.*)").unwrap();
-        }
+        // Subfeature name Regex: "^([[:^digit:]]+)([[:digit:]]+)_(.+)$"
 
-        if let Some(caps) = RE.captures(name) {
-            let feature_str_id = &caps[1];
-            let feature_number = caps[2].parse::<u32>().unwrap();
-            let subfeature_str_id = &caps[3];
+        let args: Vec<&str> = name.split('_').collect();
+        let args_bis: &str = args.first().ok_or(SubfeatureError::Invalid)?;
 
-            if let Some(sf_type) = FEATURE_TYPE_MAP
-                .get(feature_str_id)
-                .and_then(|(_, sf_map)| sf_map.get(subfeature_str_id))
-            {
-                Ok((feature_number, *sf_type))
-            } else {
-                Err(SubfeatureError::Unknown)
-            }
+        let feature_id_len = args_bis
+            .find(|c: char| c.is_ascii_digit())
+            .ok_or(SubfeatureError::Invalid)?;
+        let (feature_id, feature_number_str) = args_bis.split_at(feature_id_len);
+        let feature_number = u32::from_str(feature_number_str)?;
+        let subfeature_id = args.last().ok_or(SubfeatureError::Invalid)?;
+
+        if let Some(sf_type) = FEATURE_TYPE_MAP
+            .get(feature_id)
+            .and_then(|(_, sf_map)| sf_map.get(subfeature_id))
+        {
+            Ok((feature_number, *sf_type))
         } else {
-            Err(SubfeatureError::Invalid)
+            Err(SubfeatureError::Unknown)
         }
     }
 }
