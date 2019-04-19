@@ -4,6 +4,7 @@
 
 use std::collections::btree_map;
 use std::io::Read;
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -116,12 +117,12 @@ impl Chip {
 
         if let Some(dev_path) = dev_path {
             let dev_link_path = dev_path.read_link()?;
-            let dev_name = dev_link_path.file_name().and_then(|s| s.to_str()).unwrap();
+            let dev_name = dev_link_path.file_name().and_then(OsStr::to_str).unwrap();
 
             let mut link_path = dev_path.to_owned();
             link_path.push("subsystem");
             let subsys_path = link_path.read_link()?;
-            let subsys = subsys_path.file_name().and_then(|s| s.to_str()).unwrap();
+            let subsys = subsys_path.file_name().and_then(OsStr::to_str).unwrap();
 
             let (_bus, _address) = get_chip_bus_from_name(subsys, dev_name, context)?;
             bus = _bus;
@@ -146,7 +147,7 @@ impl Chip {
         for entry in self
             .path
             .read_dir()?
-            .filter_map(|x| x.ok())
+            .filter_map(Result::ok)
             .filter(|entry| {
                 entry
                     .file_type()

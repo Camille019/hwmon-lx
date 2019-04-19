@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -106,7 +107,7 @@ pub(crate) struct BusAdapter {
 
 impl BusAdapter {
     fn from_sysfs_i2c(path: &Path) -> Result<Option<BusAdapter>, Error> {
-        let classdev = path.file_name().and_then(|s| s.to_str()).unwrap();
+        let classdev = path.file_name().and_then(OsStr::to_str).unwrap();
 
         let prefix = "i2c-";
         if !classdev.starts_with(prefix) || (classdev.len() <= prefix.len()) {

@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::os::linux::fs::MetadataExt;
@@ -378,7 +379,7 @@ impl Subfeature {
             return Err(SubfeatureError::Invalid);
         }
 
-        let name = path.file_name().and_then(|str| str.to_str()).unwrap();
+        let name = path.file_name().and_then(OsStr::to_str).unwrap();
 
         let (feature_number, subfeature_type) = Subfeature::get_properties_from_name(name)?;
 
