@@ -7,14 +7,17 @@ COMMENT = _{ "#" ~ (!(NEWLINE) ~ ANY)* }
 
 file = {
     SOI ~ NEWLINE* ~
-    (line ~ (NEWLINE+ ~ line)*)? ~
+    (statement_block ~ (NEWLINE+ ~ statement_block)*)? ~
     NEWLINE* ~ EOI
 }
 
-line = { (bus | chip | label | compute | set | ignore) }
+statement_block = { (bus | chip ) }
 
 bus = { "bus" ~ name ~ name ~ name }
-chip = { "chip" ~ name_list }
+chip = { "chip" ~ name_list ~
+    (NEWLINE+ ~ (label | compute | set | ignore))*
+}
+
 label = { "label" ~ name ~ name }
 compute = { "compute" ~ name ~ expr ~ "," ~ expr }
 ignore = { "ignore" ~ name }
@@ -22,20 +25,26 @@ set = { "set" ~ name ~ expr }
 
 name_list = { name+ }
 
-name = @{ string | string_quoted }
+name = @{ string_short | string_quoted }
 
-string = @{ (ASCII_ALPHANUMERIC | "_")+ }
-string_quoted = @{ "\"" ~ inner ~ "\"" }
-inner = ${ (!("\"" | NEWLINE) ~ ANY)* }
+string_quoted = @{ "\"" ~ string_long ~ "\"" }
+string_short = ${ (ASCII_ALPHANUMERIC | "_")+ }
+string_long = ${ (!("\"" | NEWLINE) ~ ANY)* }
 
-expr = {
-    ("(" ~ expr ~ ")")
-    | (( sign | function ) ~ expr)
-    | ((raw | number) ~ (operator ~ expr)*)
-}
+expr = { operand ~ (operator ~ operand)* }
+operand = _{ ("(" ~ expr ~ ")") | function | var }
 
-raw = @{ "@" }
-number = @{ ASCII_DIGIT* ~ ("." ~ ASCII_DIGIT+)? }
-sign = @{ "-" }
-operator = @{ "+" | "-" | "*" | "/" }
-function = @{ "^" | "`"}
+operator = _{ add | sub | mult | div }
+add = { "+" }
+sub = { "-" }
+mult = { "*" }
+div = { "/" }
+
+function = { (inv | exp | ln) ~ operand }
+inv = { "-" }
+exp = { "^" }
+ln = { "`" }
+
+var = _{ raw | num }
+raw = { "@" }
+num = @{ ASCII_DIGIT* ~ ("." ~ ASCII_DIGIT+)? }
