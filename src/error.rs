@@ -19,7 +19,7 @@ pub enum Error {
 }
 
 impl error::Error for Error {
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             Error::Io(ref err) => Some(err),
             Error::ParseFloat(ref err) => Some(err),
@@ -68,7 +68,7 @@ pub(crate) enum ChipError {
 }
 
 impl error::Error for ChipError {
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             ChipError::Io(ref err) => Some(err),
             ChipError::ParseBusInfo(_) => None,
@@ -107,7 +107,7 @@ pub(crate) enum FeatureError {
 }
 
 impl error::Error for FeatureError {
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             FeatureError::SubfeatureType => None,
         }
@@ -133,7 +133,7 @@ pub(crate) enum SubfeatureError {
 }
 
 impl error::Error for SubfeatureError {
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             SubfeatureError::Io(ref err) => Some(err),
             SubfeatureError::Invalid => None,
