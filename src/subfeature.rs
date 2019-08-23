@@ -12,10 +12,11 @@ use std::str::FromStr;
 
 use lazy_static::lazy_static;
 use libc;
-use ratio::{self, Rational};
 
 use crate::error::*;
 use crate::feature::FeatureType;
+use crate::prefix::si::*;
+use crate::ratio::Ratio;
 use crate::sysfs::*;
 
 macro_rules! make_subfeatures {
@@ -27,9 +28,9 @@ macro_rules! make_subfeatures {
         }
 
         impl $Feature {
-            fn scale(self) -> f64 {
+            fn ratio(self) -> &'static Ratio<u64> {
                 match self {
-                    $($Feature::$Variant => (ratio::$ratio::DENOM as f64) / (ratio::$ratio::NUM as f64),)*
+                    $($Feature::$Variant => &$ratio,)*
                 }
             }
 
@@ -219,25 +220,25 @@ pub enum SubfeatureType {
 
 impl SubfeatureType {
     fn to_native(self, value: f64) -> i64 {
-        (value * self.scale()).round() as i64
+        (value * *self.ratio().denom() as f64 / *self.ratio().numer() as f64).round() as i64
     }
 
     fn to_unity(self, value: f64) -> f64 {
-        value / self.scale()
+        value * *self.ratio().numer() as f64 / *self.ratio().denom() as f64
     }
 
-    fn scale(self) -> f64 {
+    fn ratio(self) -> &'static Ratio<u64> {
         match self {
-            SubfeatureType::Fan(sft) => sft.scale(),
-            SubfeatureType::Temperature(sft) => sft.scale(),
-            SubfeatureType::Voltage(sft) => sft.scale(),
-            SubfeatureType::Current(sft) => sft.scale(),
-            SubfeatureType::Power(sft) => sft.scale(),
-            SubfeatureType::Energy(sft) => sft.scale(),
-            SubfeatureType::Humidity(sft) => sft.scale(),
-            SubfeatureType::Intrusion(sft) => sft.scale(),
-            SubfeatureType::Cpu => ratio::Milli::DENOM as f64,
-            SubfeatureType::BeepEnable => ratio::Unity::DENOM as f64,
+            SubfeatureType::Fan(sft) => sft.ratio(),
+            SubfeatureType::Temperature(sft) => sft.ratio(),
+            SubfeatureType::Voltage(sft) => sft.ratio(),
+            SubfeatureType::Current(sft) => sft.ratio(),
+            SubfeatureType::Power(sft) => sft.ratio(),
+            SubfeatureType::Energy(sft) => sft.ratio(),
+            SubfeatureType::Humidity(sft) => sft.ratio(),
+            SubfeatureType::Intrusion(sft) => sft.ratio(),
+            SubfeatureType::Cpu => &Milli,
+            SubfeatureType::BeepEnable => &Unity,
         }
     }
 

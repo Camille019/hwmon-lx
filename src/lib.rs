@@ -8,6 +8,8 @@ mod context;
 mod error;
 mod feature;
 mod parser;
+mod prefix;
+mod ratio;
 pub mod subfeature;
 mod sysfs;
 
