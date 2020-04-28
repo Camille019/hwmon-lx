@@ -341,10 +341,12 @@ impl Subfeature {
 
     /// Write the value of the subfeature.
     ///
-    /// Unsafety: no checks are made on the value before writing it.
+    /// ## Warning:
+    ///
+    /// No checks are made on the value before writing it.
     /// Affect a new value at your own risk.
-    /// See hwmon and device driver documentation for more informations.
-    pub unsafe fn write_value(&self, value: f64) -> Result<(), Error> {
+    /// See hwmon and device driver documentation for more information.
+    pub fn write_value(&self, value: f64) -> Result<(), Error> {
         if self.is_writable() {
             // TODO compute statement
             self.write_sysfs_value(value)?;
