@@ -2,20 +2,19 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::alloc::System;
+use env_logger;
 
 use hwmonlx::subfeature::*;
 use hwmonlx::{Chip, Feature, FeatureType, SubfeatureType};
 
 use lazy_static::lazy_static;
 
-#[global_allocator]
-static GLOBAL: System = System;
-
 static HYST_STR: &'static str = "hyst";
 
-fn main() {
-    let context = hwmonlx::Context::new(None).unwrap();
+fn main() -> Result<(), hwmonlx::Error> {
+    env_logger::init();
+
+    let context = hwmonlx::Context::new(None)?;
 
     match hwmonlx::read_sysfs_chips(&context) {
         Ok(chips) => {
@@ -32,6 +31,8 @@ fn main() {
         }
         Err(e) => println!("{:?}", e),
     }
+
+    Ok(())
 }
 
 #[derive(Debug)]
