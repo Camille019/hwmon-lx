@@ -8,24 +8,23 @@ COMMENT = _{ "#" ~ (!(NEWLINE) ~ ANY)* }
 file = {
     SOI ~ NEWLINE* ~
     (statement_block ~ (NEWLINE+ ~ statement_block)*)? ~
-    NEWLINE* ~ EOI
+    NEWLINE*
 }
 
-statement_block = { (bus | chip ) }
+statement_block = _{ (bus | chip ) }
 
 bus = { "bus" ~ name ~ name ~ name }
-chip = { "chip" ~ name_list ~
+chip = { "chip" ~ name+ ~
     (NEWLINE+ ~ (label | compute | set | ignore))*
 }
 
-label = { "label" ~ name ~ name }
+label = { "label" ~ name ~ string }
 compute = { "compute" ~ name ~ expr ~ "," ~ expr }
 ignore = { "ignore" ~ name }
 set = { "set" ~ name ~ expr }
 
-name_list = { name+ }
-
-name = @{ string_short | string_quoted }
+name = @{string}
+string = @{ string_short | string_quoted }
 
 string_quoted = @{ "\"" ~ string_long ~ "\"" }
 string_short = ${ (ASCII_ALPHANUMERIC | "_")+ }
