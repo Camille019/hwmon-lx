@@ -11,7 +11,6 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use lazy_static::lazy_static;
-use libc;
 
 use crate::error::*;
 use crate::feature::FeatureType;
