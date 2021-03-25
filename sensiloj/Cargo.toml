@@ -1,0 +1,15 @@
+[package]
+name = "sensiloj"
+version = "0.1.0"
+authors = ["Camille019"]
+edition = "2018"
+keywords = ["sensor", "hwmon", "Linux"]
+categories = ["hardware-support"]
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+hwmon = { path = "../hwmon" }
+lazy_static = "1.4.0"
+env_logger = "0.8.3"

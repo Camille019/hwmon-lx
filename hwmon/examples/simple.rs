@@ -1,12 +1,12 @@
 extern crate env_logger;
-extern crate hwmonlx;
+extern crate hwmon;
 
 fn main() {
     env_logger::init();
 
-    let context = hwmonlx::Context::new(None).unwrap();
+    let context = hwmon::Context::new(None).unwrap();
 
-    match hwmonlx::read_sysfs_chips(&context) {
+    match hwmon::read_sysfs_chips(&context) {
         Ok(chips) => {
             for chip in chips.iter() {
                 println!("{}", chip.name());

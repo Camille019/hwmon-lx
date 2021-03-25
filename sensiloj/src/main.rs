@@ -4,19 +4,19 @@
 
 use env_logger;
 
-use hwmonlx::subfeature::*;
-use hwmonlx::{Chip, Feature, FeatureType, SubfeatureType};
+use hwmon::subfeature::*;
+use hwmon::{Chip, Feature, FeatureType, SubfeatureType};
 
 use lazy_static::lazy_static;
 
 static HYST_STR: &'static str = "hyst";
 
-fn main() -> Result<(), hwmonlx::Error> {
+fn main() -> Result<(), hwmon::Error> {
     env_logger::init();
 
-    let context = hwmonlx::Context::new(None)?;
+    let context = hwmon::Context::new(None)?;
 
-    match hwmonlx::read_sysfs_chips(&context) {
+    match hwmon::read_sysfs_chips(&context) {
         Ok(chips) => {
             for chip in chips.iter() {
                 println!("{}", chip.name());
