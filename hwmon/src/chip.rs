@@ -281,9 +281,11 @@ fn get_chip_bus_from_name(
             bus_type = BusType::SCSI;
         }
         "platform" | "of_platform" => {
+            let args: Vec<&str> = device_name.split(':').collect();
+
+            address = args.get(1).map_or(0, |addr| u32::from_str(addr).unwrap_or(0));
             bus_type = BusType::ISA;
             bus_number = 0;
-            address = 0;
         }
         "acpi" => {
             bus_type = BusType::ACPI;
