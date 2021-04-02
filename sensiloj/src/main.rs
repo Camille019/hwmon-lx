@@ -2,14 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use env_logger;
-
 use hwmon::subfeature::*;
 use hwmon::{Chip, Feature, FeatureType, SubfeatureType};
 
 use lazy_static::lazy_static;
 
-static HYST_STR: &'static str = "hyst";
+static HYST_STR: &str = "hyst";
 
 fn main() -> Result<(), hwmon::Error> {
     env_logger::init();
@@ -57,18 +55,15 @@ struct SubfeatureList {
 
 fn scale_value(value: &mut f64, prefix: &mut String) {
     lazy_static! {
-        static ref PREFIX_SCALE: Vec<(f64, &'static str)> = {
-            let mut m = Vec::new();
-            m.push((1e-6, "n"));
-            m.push((1e-3, "u"));
-            m.push((1.0, "m"));
-            m.push((1e3, ""));
-            m.push((1e6, "k"));
-            m.push((1e9, "M"));
-            m.push((0.0, "G"));
-            m.shrink_to_fit();
-            m
-        };
+        static ref PREFIX_SCALE: Vec<(f64, &'static str)> = vec![
+            (1e-6, "n"),
+            (1e-3, "u"),
+            (1.0, "m"),
+            (1e3, ""),
+            (1e6, "k"),
+            (1e9, "M"),
+            (0.0, "G")
+        ];
     }
 
     let abs_value = value.abs();
@@ -110,7 +105,7 @@ fn print_label(label: &str, length: usize) {
     print!("{}{:len$}", label, ":", len = (length - label.len()));
 }
 
-fn print_alarms(alarms: &Vec<SubfeatureData>, leading_spaces: usize) {
+fn print_alarms(alarms: &[SubfeatureData], leading_spaces: usize) {
     print!("{:>len$}", "ALARM", len = (leading_spaces + 7));
     if !alarms.is_empty() {
         let mut printed = false;
@@ -180,7 +175,7 @@ macro_rules! print_limits {
 
 fn get_sensor_limit_data(
     feature: &Feature,
-    sfl_vec: &Vec<SubfeatureList>,
+    sfl_vec: &[SubfeatureList],
     limits: &mut Vec<SubfeatureData>,
     alarms: &mut Vec<SubfeatureData>,
 ) {
@@ -225,15 +220,13 @@ fn print_feature_fan(feature: &Feature, label_length: usize) {
         .unwrap_or(false);
     if fault {
         print!("   FAULT");
+    } else if let Some(input) = feature
+        .subfeature(SubfeatureType::Fan(Fan::Input))
+        .and_then(|sf| sf.read_value().ok())
+    {
+        print!("{:4.0} RPM", input);
     } else {
-        if let Some(input) = feature
-            .subfeature(SubfeatureType::Fan(Fan::Input))
-            .and_then(|sf| sf.read_value().ok())
-        {
-            print!("{:4.0} RPM", input);
-        } else {
-            print!("     N/A");
-        }
+        print!("     N/A");
     }
 
     // Print limits
@@ -355,15 +348,13 @@ fn print_feature_temp(feature: &Feature, label_length: usize) {
         .unwrap_or(false);
     if fault {
         print!("   FAULT  ");
+    } else if let Some(input) = feature
+        .subfeature(SubfeatureType::Temperature(Temperature::Input))
+        .and_then(|sf| sf.read_value().ok())
+    {
+        print!("{:+6.1}°C  ", input);
     } else {
-        if let Some(input) = feature
-            .subfeature(SubfeatureType::Temperature(Temperature::Input))
-            .and_then(|sf| sf.read_value().ok())
-        {
-            print!("{:+6.1}°C  ", input);
-        } else {
-            print!("     N/A  ");
-        }
+        print!("     N/A  ");
     }
 
     // Print limits
