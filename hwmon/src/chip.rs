@@ -15,6 +15,7 @@ use crate::feature::{Feature, FeatureType};
 use crate::subfeature::Subfeature;
 use crate::sysfs::*;
 
+#[derive(Debug)]
 pub struct FeatureIter<'a> {
     inner: btree_map::Values<'a, (FeatureType, u32), Feature>,
 }
@@ -283,7 +284,9 @@ fn get_chip_bus_from_name(
         "platform" | "of_platform" => {
             let args: Vec<&str> = device_name.split(':').collect();
 
-            address = args.get(1).map_or(0, |addr| u32::from_str(addr).unwrap_or(0));
+            address = args
+                .get(1)
+                .map_or(0, |addr| u32::from_str(addr).unwrap_or(0));
             bus_type = BusType::ISA;
             bus_number = 0;
         }
