@@ -62,6 +62,8 @@ make_subfeatures! {
         Div { "div", Unity, false },
         Pulses { "pulses", Unity, false },
         Target { "target", Unity, false },
+        Label { "label", Unity, false },
+        Enable { "enable", Unity, false },
         // Alarms
         Alarm { "alarm", Unity, true },
         Min_Alarm { "min_alarm", Unity, true },
