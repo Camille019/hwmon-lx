@@ -62,6 +62,7 @@ make_subfeatures! {
         Div { "div", Unity, false },
         Pulses { "pulses", Unity, false },
         Target { "target", Unity, false },
+        Enable { "enable", Unity, false },
         // Alarms
         Alarm { "alarm", Unity, true },
         Min_Alarm { "min_alarm", Unity, true },
@@ -101,6 +102,7 @@ make_subfeatures! {
         Highest { "highest", Milli, false },
         Offset { "offset", Milli, false },
         Type { "type", Unity, false },
+        Enable { "enable", Unity, false },
         // Alarms
         Alarm { "alarm", Unity, true },
         Max_Alarm { "max_alarm", Unity, true },
@@ -125,6 +127,7 @@ make_subfeatures! {
         Average { "average", Milli, false },
         Highest { "highest", Milli, false },
         Lowest { "lowest", Milli, false },
+        Enable { "enable", Unity, false },
         // Alarms
         Alarm { "alarm", Unity, true },
         Max_Alarm { "max_alarm", Unity, true },
@@ -147,6 +150,7 @@ make_subfeatures! {
         Average { "average", Milli, false },
         Highest { "highest", Milli, false },
         Lowest { "lowest", Milli, false },
+        Enable { "enable", Unity, false },
         // Alarms
         Alarm { "alarm", Unity, true },
         Max_Alarm { "max_alarm", Unity, true },
@@ -179,6 +183,7 @@ make_subfeatures! {
         Average_Interval_Max { "average_interval_max", Milli, false },
         Average_Interval_Min { "average_interval_min", Milli, false },
         Accuracy { "accuracy", Unity, false },
+        Enable { "enable", Unity, false },
         // Alarms
         Alarm { "alarm", Unity, true },
         Cap_Alarm { "cap_alarm", Unity, true },
@@ -194,6 +199,7 @@ make_subfeatures! {
     map: ENERGY_MAP,
     variants: [
         Input { "input", Micro, false },
+        Enable { "enable", Unity, false },
     ]
 }
 
@@ -202,6 +208,7 @@ make_subfeatures! {
     map: HUMIDITY_MAP,
     variants: [
         Input { "input", Milli, false },
+        Enable { "enable", Unity, false },
     ]
 }
 
