@@ -280,7 +280,6 @@ fn print_feature_fan(feature: &Feature, label_length: usize) {
 }
 
 
-// TODO
 fn print_feature_pwm(feature: &Feature, label_length: usize) {
     let label = feature.label();
     print_label(label.as_ref(), label_length);
@@ -290,19 +289,36 @@ fn print_feature_pwm(feature: &Feature, label_length: usize) {
             print!("{:6.1}%", val / 2.55);
         }
     }
+    else {
+        print!("       ")
+    }
 
-    print!("  (");
-    if let Some(sf) = feature.subfeature(SubfeatureType::Pwm(Pwm::Mode)) {
-        if let Ok(val) = sf.read_value() {
-            print!("mode = {}", val);
+    let sfmode = feature
+        .subfeature(SubfeatureType::Fan(Fan::Min))
+        .and_then(|sf| sf.read_value().ok());
+    let sffreq = feature
+        .subfeature(SubfeatureType::Fan(Fan::Max))
+        .and_then(|sf| sf.read_value().ok());
+
+    if sfmode.is_some() || sffreq.is_some() {
+        print!("  (");
+        if let Some(value) = sfmode {
+            match sfmode {
+                Some(x) if x == 0.0 => print!("mode = DC "),
+                Some(x) if x == 1.0 => print!("mode = PWM"),
+                None => (),
+                _ => unimplemented!(),
+            }
+            print!("mode = {}", value);
         }
-    }
-    if let Some(sf) = feature.subfeature(SubfeatureType::Pwm(Pwm::Freq)) {
-        if let Ok(val) = sf.read_value() {
-            print!(", freq = {:6.1} Hz", val);
+        if let Some(value) = sffreq {
+            if sfmode.is_some() {
+                print!(", ")
+            }
+            print!("freq = {:4.1} Hz", value);
         }
+        print!(")");
     }
-    print!(")");
 
     println!();
 }
