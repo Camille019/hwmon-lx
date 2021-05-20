@@ -72,6 +72,17 @@ make_subfeatures! {
 }
 
 make_subfeatures! {
+    feature: Pwm,
+    map: PWM_MAP,
+    variants: [
+        Pwm { "", Unity, false },
+        Enable { "enable", Unity, false },
+        Mode { "mode", Unity, false },
+        Freq { "freq", Unity, false },
+    ]
+}
+
+make_subfeatures! {
     feature: Temperature,
     map: TEMPERATURE_MAP,
     variants: [
@@ -206,6 +217,7 @@ make_subfeatures! {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum SubfeatureType {
     Fan(Fan),
+    Pwm(Pwm),
     Temperature(Temperature),
     Voltage(Voltage),
     Current(Current),
@@ -229,6 +241,7 @@ impl SubfeatureType {
     fn ratio(self) -> &'static Ratio<u64> {
         match self {
             SubfeatureType::Fan(sft) => sft.ratio(),
+            SubfeatureType::Pwm(sft) => sft.ratio(),
             SubfeatureType::Temperature(sft) => sft.ratio(),
             SubfeatureType::Voltage(sft) => sft.ratio(),
             SubfeatureType::Current(sft) => sft.ratio(),
@@ -245,6 +258,7 @@ impl SubfeatureType {
     pub fn is_alarm(self) -> bool {
         match self {
             SubfeatureType::Fan(sft) => sft.is_alarm(),
+            SubfeatureType::Pwm(sft) => sft.is_alarm(),
             SubfeatureType::Temperature(sft) => sft.is_alarm(),
             SubfeatureType::Voltage(sft) => sft.is_alarm(),
             SubfeatureType::Current(sft) => sft.is_alarm(),
@@ -275,6 +289,7 @@ lazy_static! {
         m.insert("temp", (FeatureType::Temperature, &TEMPERATURE_MAP));
         m.insert("in", (FeatureType::Voltage, &VOLTAGE_MAP));
         m.insert("fan", (FeatureType::Fan, &FAN_MAP));
+        m.insert("pwm", (FeatureType::Pwm, &PWM_MAP));
         m.insert("cpu", (FeatureType::Cpu, &CPU_MAP));
         m.insert("power", (FeatureType::Power, &POWER_MAP));
         m.insert("curr", (FeatureType::Current, &CURRENT_MAP));
@@ -407,17 +422,14 @@ impl Subfeature {
             return Ok((0, SubfeatureType::BeepEnable));
         }
 
-        // Subfeature name Regex: "^([[:^digit:]]+)([[:digit:]]+)_(.+)$"
+        // Subfeature name Regex: "^([[:^digit:]]+)([[:digit:]]+)(_(.+))?$"
+        let (subfeature_name, subfeature_id) = (name.split_once('_')).unwrap_or((name, ""));
 
-        let args: Vec<&str> = name.split('_').collect();
-        let args_bis: &str = args.first().ok_or(SubfeatureError::Invalid)?;
-
-        let feature_id_len = args_bis
+        let feature_id_len = subfeature_name
             .find(|c: char| c.is_ascii_digit())
             .ok_or(SubfeatureError::Invalid)?;
-        let (feature_id, feature_number_str) = args_bis.split_at(feature_id_len);
+        let (feature_id, feature_number_str) = subfeature_name.split_at(feature_id_len);
         let feature_number = u32::from_str(feature_number_str)?;
-        let subfeature_id = args.last().ok_or(SubfeatureError::Invalid)?;
 
         if let Some(sf_type) = FEATURE_TYPE_MAP
             .get(feature_id)

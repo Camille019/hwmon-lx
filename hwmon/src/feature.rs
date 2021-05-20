@@ -13,6 +13,7 @@ use crate::sysfs;
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum FeatureType {
     Fan,
+    Pwm,
     Temperature,
     Voltage,
     Current,
@@ -28,6 +29,7 @@ impl From<SubfeatureType> for FeatureType {
     fn from(sf_type: SubfeatureType) -> FeatureType {
         match sf_type {
             SubfeatureType::Fan(_) => FeatureType::Fan,
+            SubfeatureType::Pwm(_) => FeatureType::Pwm,
             SubfeatureType::Temperature(_) => FeatureType::Temperature,
             SubfeatureType::Voltage(_) => FeatureType::Voltage,
             SubfeatureType::Current(_) => FeatureType::Current,
@@ -112,6 +114,7 @@ impl Feature {
         let name = match feature_type {
             FeatureType::Voltage => format!("in{}", number),
             FeatureType::Fan => format!("fan{}", number),
+            FeatureType::Pwm => format!("pwm{}", number),
             FeatureType::Temperature => format!("temp{}", number),
             FeatureType::Power => format!("power{}", number),
             FeatureType::Energy => format!("energy{}", number),
