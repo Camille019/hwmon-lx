@@ -279,6 +279,35 @@ fn print_feature_fan(feature: &Feature, label_length: usize) {
     println!();
 }
 
+
+// TODO
+fn print_feature_pwm(feature: &Feature, label_length: usize) {
+    let label = feature.label();
+    print_label(label.as_ref(), label_length);
+
+    if let Some(sf) = feature.subfeature(SubfeatureType::Pwm(Pwm::Pwm)) {
+        if let Ok(val) = sf.read_value() {
+            print!("{:6.1}%", val / 2.55);
+        }
+    }
+
+    print!("  (");
+    if let Some(sf) = feature.subfeature(SubfeatureType::Pwm(Pwm::Mode)) {
+        if let Ok(val) = sf.read_value() {
+            print!("mode = {}", val);
+        }
+    }
+    if let Some(sf) = feature.subfeature(SubfeatureType::Pwm(Pwm::Freq)) {
+        if let Ok(val) = sf.read_value() {
+            print!(", freq = {:6.1} Hz", val);
+        }
+    }
+    print!(")");
+
+    println!();
+}
+
+
 macro_rules! make_sflist_item {
     (feature: $Feature:ident, properties: { $SfType:ident } ) => {
         SubfeatureList {
@@ -645,6 +674,7 @@ fn print_chip(chip: &Chip) {
     for feature in chip.features_iter() {
         match feature.get_type() {
             FeatureType::Fan => print_feature_fan(feature, label_length),
+            FeatureType::Pwm => print_feature_pwm(feature, label_length),
             FeatureType::Temperature => print_feature_temp(feature, label_length),
             FeatureType::Voltage => print_feature_volt(feature, label_length),
             FeatureType::Current => print_feature_curr(feature, label_length),
