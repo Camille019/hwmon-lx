@@ -15,13 +15,19 @@ pub struct Context {
 
 impl Context {
     pub fn new<'a, T: Into<Option<&'a Path>>>(config_file: T) -> Result<Context, Error> {
+
+        #[cfg(feature = "sensorsconf")]
         let config_file = config_file.into();
+        #[cfg(not(feature = "sensorsconf"))]
+        let _config_file = config_file.into();
 
         let adapters = Rc::new(bus::read_sysfs_busses()?);
 
-        // TODO
+        #[cfg(feature = "sensorsconf")]
         if let Some(path) = config_file {
+            unimplemented!()
         } else {
+            unimplemented!()
         }
 
         Ok(Context { adapters })

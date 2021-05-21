@@ -11,6 +11,9 @@ categories = ["hardware-support", "os::unix-apis"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+sensorsconf = []
+
 [dependencies]
 lazy_static = "1.4.0"
 libc = "0.2.91"
