@@ -6,8 +6,11 @@
 use std::fs;
 use std::path::Path;
 
+use lazy_static::lazy_static;
+
 use pest::Parser;
 use pest::iterators::Pair;
+use pest::prec_climber;
 use pest_derive::Parser;
 
 use crate::error::Error;
@@ -122,10 +125,38 @@ struct StmtSet {
 }
 
 
+lazy_static! {
+    static ref PREC_CLIMBER: prec_climber::PrecClimber<Rule> = {
+        use Rule::*;
+        use prec_climber::Assoc::*;
+
+        prec_climber::PrecClimber::new(vec![
+            prec_climber::Operator::new(add, Left) | prec_climber::Operator::new(sub, Left),
+            prec_climber::Operator::new(mult, Left) | prec_climber::Operator::new(div, Left),
+        ])
+    };
+}
+
 fn parse_pexpr(pexpr: Pair<Rule>) -> Expr {
     debug_assert!(pexpr.as_rule() == Rule::expr);
 
-    unimplemented!()
+    PREC_CLIMBER.climb(
+        pexpr.into_inner(),
+        |pair: Pair<Rule>| match pair.as_rule() {
+            Rule::raw => Expr::Raw,
+            Rule::num => Expr::Literal(pair.as_str().parse::<f32>().unwrap()),
+            Rule::function => unimplemented!(),
+            Rule::expr => parse_pexpr(pair),
+            _ => unreachable!(),
+        },
+        |lhs: Expr, op: Pair<Rule>, rhs: Expr| match op.as_rule() {
+            Rule::add   => Expr::Op(Operator::Add, Box::from(lhs), Box::from(rhs)),
+            Rule::sub   => Expr::Op(Operator::Sub, Box::from(lhs), Box::from(rhs)),
+            Rule::mult  => Expr::Op(Operator::Multiply, Box::from(lhs), Box::from(rhs)),
+            Rule::div   => Expr::Op(Operator::Divide, Box::from(lhs), Box::from(rhs)),
+            _ => unreachable!(),
+        },
+    )
 }
 
 
