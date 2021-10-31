@@ -371,7 +371,7 @@ macro_rules! make_sflist {
                 feature: $Feature,
                 properties: $properties
             },)*
-        ];
+        ]
     };
 }
 

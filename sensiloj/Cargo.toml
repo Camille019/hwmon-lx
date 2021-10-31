@@ -2,7 +2,7 @@
 name = "sensiloj"
 version = "0.1.0"
 authors = ["Camille019"]
-edition = "2018"
+edition = "2021"
 license = "GPL-2.0"
 keywords = ["sensor", "hwmon", "Linux"]
 categories = ["hardware-support"]
