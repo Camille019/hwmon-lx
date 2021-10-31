@@ -1,4 +1,3 @@
 # hwmon-lx
 
-### Disclaimer
-This software is under heavy development and not feature complete. The whole API is not stable and everything can change in the near future.
+A toy project used to learn Rust programming language.
