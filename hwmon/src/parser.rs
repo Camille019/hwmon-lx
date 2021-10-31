@@ -125,6 +125,32 @@ struct StmtSet {
 }
 
 
+fn parse_pfunction(pfunc: Pair<Rule>) -> Expr {
+    debug_assert!(pfunc.as_rule() == Rule::function);
+
+    let mut pfunc_inner = pfunc.into_inner();
+    println!("{:?}", pfunc_inner);
+
+    let function = match pfunc_inner.next().unwrap().as_rule() {
+        Rule::inv   => Function::Inv,
+        Rule::exp   => Function::Exp,
+        Rule::ln    => Function::Ln,
+        _ => unreachable!()
+    };
+
+    let pair = pfunc_inner.next().unwrap();
+    let operand = match pair.as_rule() {
+        Rule::raw => Expr::Raw,
+        Rule::num => Expr::Literal(pair.as_str().parse::<f32>().unwrap()),
+        Rule::function => parse_pfunction(pair),
+        Rule::expr => parse_pexpr(pair),
+        _ => unreachable!()
+    };
+
+    Expr::Fn(function, Box::from(operand))
+}
+
+
 lazy_static! {
     static ref PREC_CLIMBER: prec_climber::PrecClimber<Rule> = {
         use Rule::*;
@@ -145,7 +171,7 @@ fn parse_pexpr(pexpr: Pair<Rule>) -> Expr {
         |pair: Pair<Rule>| match pair.as_rule() {
             Rule::raw => Expr::Raw,
             Rule::num => Expr::Literal(pair.as_str().parse::<f32>().unwrap()),
-            Rule::function => unimplemented!(),
+            Rule::function => parse_pfunction(pair),
             Rule::expr => parse_pexpr(pair),
             _ => unreachable!(),
         },
@@ -307,4 +333,22 @@ pub(crate) fn parse_configuration_file<P: AsRef<Path>>(path: P) -> Result<CfgFil
     let file = fs::read_to_string(path).ok().unwrap();
 
     parse_configuration_str(&file)
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn parse_configuraion_str_compute() {
+        use super::*;
+
+        let cfg_str = r#"
+chip "lm78-*"
+
+    compute in1 @*(1+120/56) - 4.096*120/56, -(@ + 4.096*120/56)/(1+120/56)
+    compute in2 @*(1+120/56) - 4.096*120/56, `(@ + 4.096*120/56)/(1+120/56)
+    compute in3 @*(1+120/56) - 4.096*120/56, ^(@ + 4.096*120/56)/(1+120/56)
+"#;
+        assert_eq!(parse_configuration_str(cfg_str).is_ok(), true);
+
+    }
 }
