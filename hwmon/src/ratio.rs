@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 /// Represents the ratio between two numbers.
-#[derive( Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Ratio<T> {
     /// Numerator.
     numer: T,
