@@ -94,13 +94,7 @@ impl Feature {
 
     /// Return the subfeature of the given type, if it exists, `None` otherwise.
     pub fn subfeature(&self, subfeature_type: SubfeatureType) -> Option<&Subfeature> {
-        for subfeature in &self.subfeatures {
-            if subfeature.get_type() == subfeature_type {
-                return Some(subfeature);
-            }
-        }
-
-        None
+        self.subfeatures.iter().find(|&subfeature| subfeature.get_type() == subfeature_type)
     }
 
     /// An iterator visiting all subfeatures in arbitrary order.

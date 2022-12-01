@@ -34,6 +34,6 @@ impl Context {
     }
 
     pub(crate) fn adapters(&self) -> &Vec<BusAdapter> {
-        &self.adapters.as_ref()
+        self.adapters.as_ref()
     }
 }

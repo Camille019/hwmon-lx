@@ -191,7 +191,7 @@ fn get_chip_bus_from_name(
 
             let args: Vec<&str> = device_name.split('-').collect();
 
-            bus_number = i16::from_str(args.get(0).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?)?;
+            bus_number = i16::from_str(args.first().ok_or(ChipError::ParseBusInfo(BusType::SCSI))?)?;
             address = u32::from_str_radix(
                 args.get(1).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?,
                 16,
@@ -227,7 +227,7 @@ fn get_chip_bus_from_name(
             let args: Vec<&str> = end.split('.').collect();
 
             address = u32::from_str(args.get(1).ok_or(ChipError::ParseBusInfo(BusType::SPI))?)?;
-            bus_number = i16::from_str(args.get(0).ok_or(ChipError::ParseBusInfo(BusType::SPI))?)?;
+            bus_number = i16::from_str(args.first().ok_or(ChipError::ParseBusInfo(BusType::SPI))?)?;
             bus_type = BusType::SPI;
         }
         "pci" => {
@@ -241,7 +241,7 @@ fn get_chip_bus_from_name(
                 .collect();
 
             let _domain = u32::from_str_radix(
-                args.get(0).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?,
+                args.first().ok_or(ChipError::ParseBusInfo(BusType::SCSI))?,
                 16,
             )?;
             let _bus = u32::from_str_radix(
@@ -250,7 +250,7 @@ fn get_chip_bus_from_name(
             )?;
             let _slot = u32::from_str_radix(
                 args_bis
-                    .get(0)
+                    .first()
                     .ok_or(ChipError::ParseBusInfo(BusType::SCSI))?,
                 16,
             )?;
@@ -278,7 +278,7 @@ fn get_chip_bus_from_name(
             )?;
 
             address = (_bus << 8) + (_slot << 4) + _fn;
-            bus_number = i16::from_str(args.get(0).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?)?;
+            bus_number = i16::from_str(args.first().ok_or(ChipError::ParseBusInfo(BusType::SCSI))?)?;
             bus_type = BusType::SCSI;
         }
         "platform" | "of_platform" => {
