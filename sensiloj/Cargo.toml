@@ -13,4 +13,4 @@ categories = ["hardware-support"]
 [dependencies]
 hwmon = { path = "../hwmon" }
 lazy_static = "1.4.0"
-env_logger = "0.9.0"
+env_logger = "0.10.0"
