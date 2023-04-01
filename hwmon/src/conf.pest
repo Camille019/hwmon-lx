@@ -39,7 +39,7 @@ sub = { "-" }
 mult = { "*" }
 div = { "/" }
 
-function = { (inv | exp | ln) ~ operand }
+function = _{ (inv | exp | ln) ~ operand }
 inv = { "-" }
 exp = { "^" }
 ln = { "`" }

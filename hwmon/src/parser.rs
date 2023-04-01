@@ -8,7 +8,6 @@ use std::path::Path;
 use lazy_static::lazy_static;
 
 use pest::iterators::Pair;
-use pest::prec_climber;
 use pest::Parser;
 use pest_derive::Parser;
 
@@ -47,7 +46,7 @@ enum Function {
 impl Function {
     fn eval(&self, arg: f32) -> f32 {
         match self {
-            Function::Inv => arg * -1.0,
+            Function::Inv => -arg,
             Function::Exp => arg.exp(),
             Function::Ln => arg.ln(),
         }
@@ -121,65 +120,47 @@ struct StmtCompute {
 #[derive(Debug, Default, PartialEq)]
 struct StmtSet {
     name: String,
-    value: Expr, // TODO
-}
-
-fn parse_pfunction(pfunc: Pair<Rule>) -> Expr {
-    debug_assert!(pfunc.as_rule() == Rule::function);
-
-    let mut pfunc_inner = pfunc.into_inner();
-
-    let function = match pfunc_inner.next().unwrap().as_rule() {
-        Rule::inv   => Function::Inv,
-        Rule::exp   => Function::Exp,
-        Rule::ln    => Function::Ln,
-        _ => unreachable!(),
-    };
-
-    let pair = pfunc_inner.next().unwrap();
-    let operand = match pair.as_rule() {
-        Rule::raw       => Expr::Raw,
-        Rule::num       => Expr::Literal(pair.as_str().parse::<f32>().unwrap()),
-        Rule::function  => parse_pfunction(pair),
-        Rule::expr      => parse_pexpr(pair),
-        _ => unreachable!(),
-    };
-
-    Expr::Fn(function, Box::from(operand))
+    value: Expr,
 }
 
 lazy_static! {
-    static ref PREC_CLIMBER: prec_climber::PrecClimber<Rule> = {
-        use prec_climber::Assoc::*;
-        use Rule::*;
+    static ref PRATT_PARSER: pest::pratt_parser::PrattParser<Rule> = {
+        use pest::pratt_parser::Op;
+        use pest::pratt_parser::Assoc;
 
-        prec_climber::PrecClimber::new(vec![
-            prec_climber::Operator::new(add, Left) | prec_climber::Operator::new(sub, Left),
-            prec_climber::Operator::new(mult, Left) | prec_climber::Operator::new(div, Left),
-        ])
+        pest::pratt_parser::PrattParser::new()
+            .op(Op::infix(Rule::add, Assoc::Left) | Op::infix(Rule::sub, Assoc::Left))
+            .op(Op::infix(Rule::mult, Assoc::Left) | Op::infix(Rule::div, Assoc::Left))
+            .op(Op::prefix(Rule::inv))
+            .op(Op::prefix(Rule::exp))
+            .op(Op::prefix(Rule::ln))
     };
 }
 
 fn parse_pexpr(pexpr: Pair<Rule>) -> Expr {
     debug_assert!(pexpr.as_rule() == Rule::expr);
 
-    PREC_CLIMBER.climb(
-        pexpr.into_inner(),
-        |pair: Pair<Rule>| match pair.as_rule() {
+    PRATT_PARSER
+        .map_primary(|primary| match primary.as_rule() {
             Rule::raw => Expr::Raw,
-            Rule::num => Expr::Literal(pair.as_str().parse::<f32>().unwrap()),
-            Rule::function => parse_pfunction(pair),
-            Rule::expr => parse_pexpr(pair),
+            Rule::num => Expr::Literal(primary.as_str().parse::<f32>().unwrap()),
+            Rule::expr => parse_pexpr(primary),
             _ => unreachable!(),
-        },
-        |lhs: Expr, op: Pair<Rule>, rhs: Expr| match op.as_rule() {
+        })
+        .map_prefix(|op, rhs| match op.as_rule() {
+            Rule::inv  => Expr::Fn(Function::Inv, Box::from(rhs)),
+            Rule::exp  => Expr::Fn(Function::Exp, Box::from(rhs)),
+            Rule::ln  => Expr::Fn(Function::Ln, Box::from(rhs)),
+            _ => unreachable!(),
+        })
+        .map_infix(|lhs, op, rhs| match op.as_rule() {
             Rule::add   => Expr::Op(Operator::Add, Box::from(lhs), Box::from(rhs)),
             Rule::sub   => Expr::Op(Operator::Sub, Box::from(lhs), Box::from(rhs)),
             Rule::mult  => Expr::Op(Operator::Multiply, Box::from(lhs), Box::from(rhs)),
             Rule::div   => Expr::Op(Operator::Divide, Box::from(lhs), Box::from(rhs)),
             _ => unreachable!(),
-        },
-    )
+        })
+        .parse(pexpr.into_inner())
 }
 
 fn parse_pcompute(pcompute: Pair<Rule>) -> StmtCompute {
