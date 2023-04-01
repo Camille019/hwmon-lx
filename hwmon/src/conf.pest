@@ -13,7 +13,7 @@ file = {
 
 statement_block = _{ (bus | chip ) }
 
-bus = { "bus" ~ name ~ name ~ name }
+bus = { "bus" ~ name ~ string }
 chip = { "chip" ~ name+ ~
     (NEWLINE+ ~ (label | compute | set | ignore))*
 }

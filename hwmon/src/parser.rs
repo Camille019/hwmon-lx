@@ -53,18 +53,13 @@ impl Function {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 enum Expr {
     Fn(Function, Box<Expr>),
     Op(Operator, Box<Expr>, Box<Expr>),
     Literal(f32),
+    #[default]
     Raw,
-}
-
-impl Default for Expr {
-    fn default() -> Self {
-        Expr::Raw
-    }
 }
 
 impl Expr {
@@ -86,8 +81,14 @@ impl Expr {
 
 #[derive(Debug, Default, PartialEq)]
 pub(crate) struct CfgFile {
-//    bus: Vec<>,
+    buses: Vec<StmtBus>,
     chips: Vec<StmtChip>,
+}
+
+#[derive(Debug, Default, PartialEq)]
+struct StmtBus {
+    number: String,
+    adapter: String,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -305,6 +306,41 @@ fn parse_pchip(pchip: Pair<Rule>) -> StmtChip {
     chip
 }
 
+fn parse_pbus(pbus: Pair<Rule>) -> StmtBus {
+    debug_assert!(pbus.as_rule() == Rule::bus);
+
+    let mut bus = StmtBus::default();
+
+    for pair in pbus.into_inner() {
+        match pair.as_rule() {
+            Rule::name => {
+                bus.number = pair
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .as_span()
+                    .as_str()
+                    .to_string();
+            }
+            Rule::string => {
+                bus.adapter = pair
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .as_span()
+                    .as_str()
+                    .to_string();
+            }
+            _ => {
+                log::debug!("Found bad pair: {:#?}", pair);
+                unreachable!()
+            }
+        }
+    }
+
+    bus
+}
+
 fn parse_pfile(pfile: Pair<Rule>) -> CfgFile {
     debug_assert!(pfile.as_rule() == Rule::file);
 
@@ -312,7 +348,9 @@ fn parse_pfile(pfile: Pair<Rule>) -> CfgFile {
 
     for pair in pfile.into_inner() {
         match pair.as_rule() {
-            Rule::bus => {}
+            Rule::bus => {
+                let bus = parse_pbus(pair);
+                cfg.buses.push(bus)}
             Rule::chip => {
                 let chip = parse_pchip(pair);
                 cfg.chips.push(chip)
@@ -349,6 +387,27 @@ mod tests {
     use super::*;
 
     #[test]
+    fn parse_conf_bus_statement() {
+        let cfg_str = r#"
+bus "i2c-0" "SMBus I801 adapter at 0400"
+bus "i2c-1" "SMBus PIIX4 adapter port 2 at 0b00"
+"#;
+        let expected = CfgFile {
+            buses: vec![StmtBus {
+                number: String::from("i2c-0"),
+                adapter: String::from("SMBus I801 adapter at 0400"),
+            },
+            StmtBus {
+                number: String::from("i2c-1"),
+                adapter: String::from("SMBus PIIX4 adapter port 2 at 0b00"),
+            }],
+            ..Default::default()
+        };
+        let conf = parse_configuration_str(cfg_str).unwrap_or_default();
+        assert_eq!(conf == expected, true);
+    }
+
+    #[test]
     fn parse_conf_name_unquoted() {
         let cfg_str = r#"
 chip "blah-*"
@@ -363,6 +422,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
@@ -384,6 +444,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
@@ -403,6 +464,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
@@ -423,6 +485,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, false);
@@ -443,6 +506,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, false);
@@ -463,6 +527,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, false);
@@ -483,6 +548,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, false);
@@ -503,6 +569,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
@@ -553,6 +620,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
@@ -574,6 +642,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
@@ -594,6 +663,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
@@ -614,6 +684,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
@@ -633,6 +704,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
@@ -653,6 +725,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, false);
@@ -680,6 +753,7 @@ chip "blah-*"
                 ],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, false);
@@ -699,6 +773,7 @@ chip "blah-*"
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, false);
