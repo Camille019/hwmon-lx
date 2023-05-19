@@ -14,7 +14,6 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 // MA 02110-1301, USA.
 
-
 use hwmon::subfeature::*;
 use hwmon::{Chip, Feature, FeatureType, SubfeatureType};
 
@@ -292,7 +291,6 @@ fn print_feature_fan(feature: &Feature, label_length: usize) {
     println!();
 }
 
-
 fn print_feature_pwm(feature: &Feature, label_length: usize) {
     let label = feature.label();
     print_label(label.as_ref(), label_length);
@@ -301,8 +299,7 @@ fn print_feature_pwm(feature: &Feature, label_length: usize) {
         if let Ok(val) = sf.read_value() {
             print!("{:6.1}%", val / 2.55);
         }
-    }
-    else {
+    } else {
         print!("       ")
     }
 
@@ -335,7 +332,6 @@ fn print_feature_pwm(feature: &Feature, label_length: usize) {
 
     println!();
 }
-
 
 macro_rules! make_sflist_item {
     (feature: $Feature:ident, properties: { $SfType:ident } ) => {

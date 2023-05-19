@@ -126,8 +126,8 @@ struct StmtSet {
 
 lazy_static! {
     static ref PRATT_PARSER: pest::pratt_parser::PrattParser<Rule> = {
-        use pest::pratt_parser::Op;
         use pest::pratt_parser::Assoc;
+        use pest::pratt_parser::Op;
 
         pest::pratt_parser::PrattParser::new()
             .op(Op::infix(Rule::add, Assoc::Left) | Op::infix(Rule::sub, Assoc::Left))
@@ -149,16 +149,16 @@ fn parse_pexpr(pexpr: Pair<Rule>) -> Expr {
             _ => unreachable!(),
         })
         .map_prefix(|op, rhs| match op.as_rule() {
-            Rule::inv  => Expr::Fn(Function::Inv, Box::from(rhs)),
-            Rule::exp  => Expr::Fn(Function::Exp, Box::from(rhs)),
-            Rule::ln  => Expr::Fn(Function::Ln, Box::from(rhs)),
+            Rule::inv => Expr::Fn(Function::Inv, Box::from(rhs)),
+            Rule::exp => Expr::Fn(Function::Exp, Box::from(rhs)),
+            Rule::ln => Expr::Fn(Function::Ln, Box::from(rhs)),
             _ => unreachable!(),
         })
         .map_infix(|lhs, op, rhs| match op.as_rule() {
-            Rule::add   => Expr::Op(Operator::Add, Box::from(lhs), Box::from(rhs)),
-            Rule::sub   => Expr::Op(Operator::Sub, Box::from(lhs), Box::from(rhs)),
-            Rule::mult  => Expr::Op(Operator::Multiply, Box::from(lhs), Box::from(rhs)),
-            Rule::div   => Expr::Op(Operator::Divide, Box::from(lhs), Box::from(rhs)),
+            Rule::add => Expr::Op(Operator::Add, Box::from(lhs), Box::from(rhs)),
+            Rule::sub => Expr::Op(Operator::Sub, Box::from(lhs), Box::from(rhs)),
+            Rule::mult => Expr::Op(Operator::Multiply, Box::from(lhs), Box::from(rhs)),
+            Rule::div => Expr::Op(Operator::Divide, Box::from(lhs), Box::from(rhs)),
             _ => unreachable!(),
         })
         .parse(pexpr.into_inner())
@@ -350,7 +350,8 @@ fn parse_pfile(pfile: Pair<Rule>) -> CfgFile {
         match pair.as_rule() {
             Rule::bus => {
                 let bus = parse_pbus(pair);
-                cfg.buses.push(bus)}
+                cfg.buses.push(bus)
+            }
             Rule::chip => {
                 let chip = parse_pchip(pair);
                 cfg.chips.push(chip)
@@ -393,14 +394,16 @@ bus "i2c-0" "SMBus I801 adapter at 0400"
 bus "i2c-1" "SMBus PIIX4 adapter port 2 at 0b00"
 "#;
         let expected = CfgFile {
-            buses: vec![StmtBus {
-                number: String::from("i2c-0"),
-                adapter: String::from("SMBus I801 adapter at 0400"),
-            },
-            StmtBus {
-                number: String::from("i2c-1"),
-                adapter: String::from("SMBus PIIX4 adapter port 2 at 0b00"),
-            }],
+            buses: vec![
+                StmtBus {
+                    number: String::from("i2c-0"),
+                    adapter: String::from("SMBus I801 adapter at 0400"),
+                },
+                StmtBus {
+                    number: String::from("i2c-1"),
+                    adapter: String::from("SMBus PIIX4 adapter port 2 at 0b00"),
+                },
+            ],
             ..Default::default()
         };
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
@@ -590,34 +593,36 @@ chip "blah-*"
         let expected = CfgFile {
             chips: vec![StmtChip {
                 names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("abcdefg"),
-                    value: String::from("hijklmnop"),
-                },
-                StmtLabel {
-                    name: String::from("qrs"),
-                    value: String::from("tuv"),
-                },
-                StmtLabel {
-                    name: String::from("wx"),
-                    value: String::from("yz"),
-                },
-                StmtLabel {
-                    name: String::from("a0123456789"),
-                    value: String::from("982lksdf"),
-                },
-                StmtLabel {
-                    name: String::from("_abcd"),
-                    value: String::from("1234_"),
-                },
-                StmtLabel {
-                    name: String::from("_"),
-                    value: String::from("foo_bar_baz"),
-                },
-                StmtLabel {
-                    name: String::from("liajesiajef82197fjadf"),
-                    value: String::from("blah"),
-                }],
+                labels: vec![
+                    StmtLabel {
+                        name: String::from("abcdefg"),
+                        value: String::from("hijklmnop"),
+                    },
+                    StmtLabel {
+                        name: String::from("qrs"),
+                        value: String::from("tuv"),
+                    },
+                    StmtLabel {
+                        name: String::from("wx"),
+                        value: String::from("yz"),
+                    },
+                    StmtLabel {
+                        name: String::from("a0123456789"),
+                        value: String::from("982lksdf"),
+                    },
+                    StmtLabel {
+                        name: String::from("_abcd"),
+                        value: String::from("1234_"),
+                    },
+                    StmtLabel {
+                        name: String::from("_"),
+                        value: String::from("foo_bar_baz"),
+                    },
+                    StmtLabel {
+                        name: String::from("liajesiajef82197fjadf"),
+                        value: String::from("blah"),
+                    },
+                ],
                 ..Default::default()
             }],
             ..Default::default()
