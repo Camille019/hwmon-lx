@@ -1,3 +1,8 @@
+<!--
+ - SPDX-FileCopyrightText: 2018 Camille019
+ - SPDX-License-Identifier: MPL-2.0
+-->
+
 # hwmon
 
 A pure Rust interface to the Linux hwmon sysfs interface. 

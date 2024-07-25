@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2021 Camille019
+# SPDX-License-Identifier: GPL-2.0-only
+
 [package]
 name = "sensiloj"
 version = "0.1.0"

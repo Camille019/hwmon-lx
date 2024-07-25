@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: NONE
+# SPDX-License-Identifier: CC0-1.0
+
 [package]
 name = "hwmon"
 version = "0.1.0"
@@ -13,7 +16,7 @@ categories = ["hardware-support", "os::unix-apis"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-sensorsconf = ["pest", "pest_derive"]
+sensorsconf = ["dep:pest", "dep:pest_derive"]
 
 [dependencies]
 libc = "0.2.155"
