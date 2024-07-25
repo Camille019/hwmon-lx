@@ -14,10 +14,10 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 // MA 02110-1301, USA.
 
+use std::sync::LazyLock;
+
 use hwmon::subfeature::*;
 use hwmon::{Chip, Feature, FeatureType, SubfeatureType};
-
-use lazy_static::lazy_static;
 
 static HYST_STR: &str = "hyst";
 
@@ -66,17 +66,17 @@ struct SubfeatureList {
 }
 
 fn scale_value(value: &mut f64, prefix: &mut String) {
-    lazy_static! {
-        static ref PREFIX_SCALE: Vec<(f64, &'static str)> = vec![
+    static PREFIX_SCALE: LazyLock<Vec<(f64, &'static str)>> = LazyLock::new(|| {
+        vec![
             (1e-6, "n"),
             (1e-3, "u"),
             (1.0, "m"),
             (1e3, ""),
             (1e6, "k"),
             (1e9, "M"),
-            (0.0, "G")
-        ];
-    }
+            (0.0, "G"),
+        ]
+    });
 
     let abs_value = value.abs();
     let mut divisor = 1e-9;
@@ -371,8 +371,8 @@ macro_rules! make_sflist {
     };
 }
 
-lazy_static! {
-    static ref TEMP_SENSORS: Vec<SubfeatureList> = make_sflist! {
+static TEMP_SENSORS: LazyLock<Vec<SubfeatureList>> = LazyLock::new(|| {
+    make_sflist! {
         feature: Temperature,
         list = [
             { Alarm },
@@ -389,8 +389,8 @@ lazy_static! {
             { Lowest, "lowest" },
             { Highest, "highest" },
         ]
-    };
-}
+    }
+});
 
 fn print_feature_temp(feature: &Feature, label_length: usize) {
     let label = feature.label();
@@ -448,8 +448,8 @@ fn print_feature_temp(feature: &Feature, label_length: usize) {
     println!();
 }
 
-lazy_static! {
-    static ref VOLTAGE_SENSORS: Vec<SubfeatureList> = make_sflist! {
+static VOLTAGE_SENSORS: LazyLock<Vec<SubfeatureList>> = LazyLock::new(|| {
+    make_sflist! {
         feature: Voltage,
         list = [
             { Alarm },
@@ -465,8 +465,8 @@ lazy_static! {
             { Lowest, "lowest" },
             { Highest, "highest" },
         ]
-    };
-}
+    }
+});
 
 fn print_feature_volt(feature: &Feature, label_length: usize) {
     let label = feature.label();
@@ -492,8 +492,8 @@ fn print_feature_volt(feature: &Feature, label_length: usize) {
     println!();
 }
 
-lazy_static! {
-    static ref CURRENT_SENSORS: Vec<SubfeatureList> = make_sflist! {
+static CURRENT_SENSORS: LazyLock<Vec<SubfeatureList>> = LazyLock::new(|| {
+    make_sflist! {
         feature: Current,
         list = [
             { Alarm },
@@ -509,8 +509,8 @@ lazy_static! {
             { Lowest, "lowest" },
             { Highest, "highest" },
         ]
-    };
-}
+    }
+});
 
 fn print_feature_curr(feature: &Feature, label_length: usize) {
     let label = feature.label();
@@ -536,8 +536,8 @@ fn print_feature_curr(feature: &Feature, label_length: usize) {
     println!();
 }
 
-lazy_static! {
-    static ref POWER_COMMON_SENSORS: Vec<SubfeatureList> = make_sflist! {
+static POWER_COMMON_SENSORS: LazyLock<Vec<SubfeatureList>> = LazyLock::new(|| {
+    make_sflist! {
         feature: Power,
         list = [
             { Alarm },
@@ -552,8 +552,11 @@ lazy_static! {
             { Crit_Max, "crit" },
             { Cap, "cap" },
         ]
-    };
-    static ref POWER_INST_SENSORS: Vec<SubfeatureList> = make_sflist! {
+    }
+});
+
+static POWER_INST_SENSORS: LazyLock<Vec<SubfeatureList>> = LazyLock::new(|| {
+    make_sflist! {
         feature: Power,
         list = [
             { Input_Lowest, "lowest" },
@@ -563,16 +566,19 @@ lazy_static! {
             { Average_Highest, "avg highest" },
             { Average_Interval, "interval" },
         ]
-    };
-    static ref POWER_AVG_SENSORS: Vec<SubfeatureList> = make_sflist! {
+    }
+});
+
+static POWER_AVG_SENSORS: LazyLock<Vec<SubfeatureList>> = LazyLock::new(|| {
+    make_sflist! {
         feature: Power,
         list = [
             { Average_Lowest, "lowest" },
             { Average_Highest, "highest" },
             { Average_Interval, "interval" },
         ]
-    };
-}
+    }
+});
 
 fn print_feature_power(feature: &Feature, label_length: usize) {
     let label = feature.label();

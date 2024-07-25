@@ -3,6 +3,7 @@ name = "sensiloj"
 version = "0.1.0"
 authors = ["Camille019"]
 edition = "2021"
+rust-version = "1.80"
 license = "GPL-2.0"
 keywords = ["sensor", "hwmon", "Linux"]
 categories = ["hardware-support"]
@@ -12,5 +13,4 @@ categories = ["hardware-support"]
 
 [dependencies]
 hwmon = { path = "../hwmon" }
-lazy_static = "1.4.0"
-env_logger = "0.10.0"
+env_logger = "0.11.0"
