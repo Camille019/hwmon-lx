@@ -4,8 +4,7 @@
 
 use std::fs;
 use std::path::Path;
-
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
 
 use pest::iterators::Pair;
 use pest::Parser;
@@ -124,19 +123,17 @@ struct StmtSet {
     value: Expr,
 }
 
-lazy_static! {
-    static ref PRATT_PARSER: pest::pratt_parser::PrattParser<Rule> = {
-        use pest::pratt_parser::Assoc;
-        use pest::pratt_parser::Op;
+static PRATT_PARSER: LazyLock<pest::pratt_parser::PrattParser<Rule>> = LazyLock::new(|| {
+    use pest::pratt_parser::Assoc;
+    use pest::pratt_parser::Op;
 
-        pest::pratt_parser::PrattParser::new()
-            .op(Op::infix(Rule::add, Assoc::Left) | Op::infix(Rule::sub, Assoc::Left))
-            .op(Op::infix(Rule::mult, Assoc::Left) | Op::infix(Rule::div, Assoc::Left))
-            .op(Op::prefix(Rule::inv))
-            .op(Op::prefix(Rule::exp))
-            .op(Op::prefix(Rule::ln))
-    };
-}
+    pest::pratt_parser::PrattParser::new()
+        .op(Op::infix(Rule::add, Assoc::Left) | Op::infix(Rule::sub, Assoc::Left))
+        .op(Op::infix(Rule::mult, Assoc::Left) | Op::infix(Rule::div, Assoc::Left))
+        .op(Op::prefix(Rule::inv))
+        .op(Op::prefix(Rule::exp))
+        .op(Op::prefix(Rule::ln))
+});
 
 fn parse_pexpr(pexpr: Pair<Rule>) -> Expr {
     debug_assert!(pexpr.as_rule() == Rule::expr);

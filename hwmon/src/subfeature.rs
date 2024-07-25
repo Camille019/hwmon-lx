@@ -9,14 +9,15 @@ use std::io::Write;
 use std::os::linux::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
 
 use crate::error::*;
 use crate::feature::FeatureType;
 use crate::prefix::si::*;
 use crate::ratio::Ratio;
 use crate::sysfs::*;
+
+type SubfeatureTypeMap = HashMap<&'static str, SubfeatureType>;
 
 macro_rules! make_subfeatures {
     (feature: $Feature:ident, map: $MAP_NAME:ident, variants: [ $($Variant:ident { $pattern:expr, $ratio:ident, $alarm:expr}),* $(,)* ]) => {
@@ -41,14 +42,12 @@ macro_rules! make_subfeatures {
             }
         }
 
-        lazy_static! {
-            static ref $MAP_NAME: HashMap<&'static str, SubfeatureType> = {
-                let mut m = HashMap::new();
-                $(m.insert($pattern, SubfeatureType::$Feature($Feature::$Variant));)*
-                m.shrink_to_fit();
-                m
-            };
-        }
+        static $MAP_NAME: LazyLock<SubfeatureTypeMap> = LazyLock::new(|| {
+            let mut m = HashMap::new();
+            $(m.insert($pattern, SubfeatureType::$Feature($Feature::$Variant));)*
+            m.shrink_to_fit();
+            m
+        });
     }
 }
 
@@ -279,34 +278,32 @@ impl SubfeatureType {
     }
 }
 
-lazy_static! {
-    static ref CPU_MAP: HashMap<&'static str, SubfeatureType> = {
-        use self::SubfeatureType::*;
+static CPU_MAP: LazyLock<SubfeatureTypeMap> = LazyLock::new(|| {
+    use self::SubfeatureType::*;
 
-        let mut m = HashMap::new();
-        m.insert("vid", Cpu);
-        m.shrink_to_fit();
-        m
-    };
-    static ref FEATURE_TYPE_MAP: HashMap<&'static str, (FeatureType, &'static HashMap<&'static str, SubfeatureType>)> = {
-        let mut m: HashMap<
-            &'static str,
-            (FeatureType, &'static HashMap<&'static str, SubfeatureType>),
-        > = HashMap::new();
-        m.insert("temp", (FeatureType::Temperature, &TEMPERATURE_MAP));
-        m.insert("in", (FeatureType::Voltage, &VOLTAGE_MAP));
-        m.insert("fan", (FeatureType::Fan, &FAN_MAP));
-        m.insert("pwm", (FeatureType::Pwm, &PWM_MAP));
-        m.insert("cpu", (FeatureType::Cpu, &CPU_MAP));
-        m.insert("power", (FeatureType::Power, &POWER_MAP));
-        m.insert("curr", (FeatureType::Current, &CURRENT_MAP));
-        m.insert("energy", (FeatureType::Energy, &ENERGY_MAP));
-        m.insert("intrusion", (FeatureType::Intrusion, &INTRUSION_MAP));
-        m.insert("humidity", (FeatureType::Humidity, &HUMIDITY_MAP));
-        m.shrink_to_fit();
-        m
-    };
-}
+    let mut m = HashMap::new();
+    m.insert("vid", Cpu);
+    m.shrink_to_fit();
+    m
+});
+
+static FEATURE_TYPE_MAP: LazyLock<
+    HashMap<&'static str, (FeatureType, &'static SubfeatureTypeMap)>,
+> = LazyLock::new(|| {
+    let mut m: HashMap<&'static str, (FeatureType, &'static SubfeatureTypeMap)> = HashMap::new();
+    m.insert("temp", (FeatureType::Temperature, &TEMPERATURE_MAP));
+    m.insert("in", (FeatureType::Voltage, &VOLTAGE_MAP));
+    m.insert("fan", (FeatureType::Fan, &FAN_MAP));
+    m.insert("pwm", (FeatureType::Pwm, &PWM_MAP));
+    m.insert("cpu", (FeatureType::Cpu, &CPU_MAP));
+    m.insert("power", (FeatureType::Power, &POWER_MAP));
+    m.insert("curr", (FeatureType::Current, &CURRENT_MAP));
+    m.insert("energy", (FeatureType::Energy, &ENERGY_MAP));
+    m.insert("intrusion", (FeatureType::Intrusion, &INTRUSION_MAP));
+    m.insert("humidity", (FeatureType::Humidity, &HUMIDITY_MAP));
+    m.shrink_to_fit();
+    m
+});
 
 #[derive(Clone, Debug)]
 pub struct Subfeature {
