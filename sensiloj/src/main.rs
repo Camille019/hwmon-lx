@@ -301,8 +301,8 @@ fn print_feature_pwm(feature: &Feature, label_length: usize) {
         print!("  (");
         if let Some(value) = sfmode {
             match sfmode {
-                Some(x) if x == 0.0 => print!("mode = DC "),
-                Some(x) if x == 1.0 => print!("mode = PWM"),
+                Some(0.0) => print!("mode = DC "),
+                Some(1.0) => print!("mode = PWM"),
                 None => (),
                 _ => unimplemented!(),
             }
