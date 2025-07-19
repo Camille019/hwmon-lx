@@ -107,16 +107,16 @@ impl Feature {
 
     pub(crate) fn new(dir: &Path, feature_type: FeatureType, number: u32) -> Feature {
         let name = match feature_type {
-            FeatureType::Voltage => format!("in{}", number),
-            FeatureType::Fan => format!("fan{}", number),
-            FeatureType::Pwm => format!("pwm{}", number),
-            FeatureType::Temperature => format!("temp{}", number),
-            FeatureType::Power => format!("power{}", number),
-            FeatureType::Energy => format!("energy{}", number),
-            FeatureType::Current => format!("curr{}", number),
-            FeatureType::Humidity => format!("humidity{}", number),
-            FeatureType::Cpu => format!("cpu{}_vid", number),
-            FeatureType::Intrusion => format!("intrusion{}", number),
+            FeatureType::Voltage => format!("in{number}"),
+            FeatureType::Fan => format!("fan{number}"),
+            FeatureType::Pwm => format!("pwm{number}"),
+            FeatureType::Temperature => format!("temp{number}"),
+            FeatureType::Power => format!("power{number}"),
+            FeatureType::Energy => format!("energy{number}"),
+            FeatureType::Current => format!("curr{number}"),
+            FeatureType::Humidity => format!("humidity{number}"),
+            FeatureType::Cpu => format!("cpu{number}_vid"),
+            FeatureType::Intrusion => format!("intrusion{number}"),
             FeatureType::BeepEnable => String::from("beep_enable"),
         };
 

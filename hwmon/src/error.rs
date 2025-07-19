@@ -31,11 +31,11 @@ impl error::Error for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Error::Access(ref err) => write!(f, "Access error: {}", err),
-            Error::Io(ref err) => write!(f, "IO error: {}", err),
-            Error::ParseFloat(ref err) => write!(f, "ParseFloat error: {}", err),
-            Error::ParseInt(ref err) => write!(f, "ParseInt error: {}", err),
-            Error::ParseBusName(ref bus) => write!(f, "Failed to parse {} bus name", bus),
+            Error::Access(ref err) => write!(f, "Access error: {err}"),
+            Error::Io(ref err) => write!(f, "IO error: {err}"),
+            Error::ParseFloat(ref err) => write!(f, "ParseFloat error: {err}"),
+            Error::ParseInt(ref err) => write!(f, "ParseInt error: {err}"),
+            Error::ParseBusName(ref bus) => write!(f, "Failed to parse {bus} bus name"),
         }
     }
 }
@@ -80,9 +80,9 @@ impl error::Error for ChipError {
 impl fmt::Display for ChipError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            ChipError::Io(ref err) => write!(f, "IO error: {}", err),
-            ChipError::ParseBusInfo(ref bus) => write!(f, "Failed to read {} bus info", bus),
-            ChipError::ParseInt(ref err) => write!(f, "ParseInt error: {}", err),
+            ChipError::Io(ref err) => write!(f, "IO error: {err}"),
+            ChipError::ParseBusInfo(ref bus) => write!(f, "Failed to read {bus} bus info"),
+            ChipError::ParseInt(ref err) => write!(f, "ParseInt error: {err}"),
             ChipError::UnknownDevice => write!(f, "Unknown device"),
         }
     }
@@ -145,9 +145,9 @@ impl error::Error for SubfeatureError {
 impl fmt::Display for SubfeatureError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            SubfeatureError::Io(ref err) => write!(f, "IO error: {}", err),
+            SubfeatureError::Io(ref err) => write!(f, "IO error: {err}"),
             SubfeatureError::Invalid => write!(f, "Invalid subfeature"),
-            SubfeatureError::ParseInt(ref err) => write!(f, "ParseInt error: {}", err),
+            SubfeatureError::ParseInt(ref err) => write!(f, "ParseInt error: {err}"),
             SubfeatureError::Unknown => write!(f, "Unknown subfeature"),
         }
     }

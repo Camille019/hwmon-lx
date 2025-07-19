@@ -203,7 +203,7 @@ fn get_chip_bus_from_name(
             } else {
                 bus_type = BusType::I2C;
                 let mut bus_path = PathBuf::from(SYSFS_MOUNT);
-                bus_path.push(format!("class/i2c-adapter/i2c-{}/device/name", bus_number));
+                bus_path.push(format!("class/i2c-adapter/i2c-{bus_number}/device/name"));
 
                 if let Ok(mut bus_file) = std::fs::File::open(bus_path) {
                     let mut bus_name: String = String::new();
@@ -323,20 +323,20 @@ pub fn read_sysfs_chips(context: &Context) -> Result<Vec<Chip>, Error> {
         let mut link_path = path.clone();
         link_path.push("device");
         let chip = if link_path.read_link().is_ok() {
-            log::debug!("{:?}.read_link() -> Ok", link_path);
+            log::debug!("{link_path:?}.read_link() -> Ok");
 
             // The attributes we want might be those of the hwmon class
             // device, or those of the device itself.
             match Chip::from_path(path.as_ref(), link_path.as_ref(), context) {
                 Ok(chip) => Ok(chip),
                 Err(e) => {
-                    log::debug!("{:?}", e);
+                    log::debug!("{e:?}");
                     Chip::from_path(link_path.as_ref(), link_path.as_ref(), context)
                 }
             }
         } else {
             // No device link? Treat as virtual
-            log::debug!("{:?}.read_link() -> Err", link_path);
+            log::debug!("{link_path:?}.read_link() -> Err");
             Chip::from_path(path.as_ref(), None, context)
         };
 
