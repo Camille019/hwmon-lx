@@ -18,7 +18,7 @@ fn main() -> Result<(), hwmon::Error> {
             for chip in chips.iter() {
                 println!("{}", chip.name());
                 if let Some(name) = chip.bus().adapter_name() {
-                    println!("Adapter: {}", name);
+                    println!("Adapter: {name}");
                 } else {
                     eprintln!("Can't get adapter name");
                 }
@@ -26,7 +26,7 @@ fn main() -> Result<(), hwmon::Error> {
                 println!();
             }
         }
-        Err(e) => println!("{:?}", e),
+        Err(e) => println!("{e:?}"),
     }
 
     Ok(())
@@ -223,7 +223,7 @@ fn print_feature_fan(feature: &Feature, label_length: usize) {
         .subfeature(SubfeatureType::Fan(Fan::Input))
         .and_then(|sf| sf.read_value().ok())
     {
-        print!("{:4.0} RPM", input);
+        print!("{input:4.0} RPM");
     } else {
         print!("     N/A");
     }
@@ -242,19 +242,19 @@ fn print_feature_fan(feature: &Feature, label_length: usize) {
     if sfmin.is_some() || sfmax.is_some() || sfdiv.is_some() {
         print!("  (");
         if let Some(value) = sfmin {
-            print!("min = {:4.0} RPM", value);
+            print!("min = {value:4.0} RPM");
         }
         if let Some(value) = sfmax {
             if sfmin.is_some() {
                 print!(", ")
             }
-            print!("min = {:4.0} RPM", value);
+            print!("min = {value:4.0} RPM");
         }
         if let Some(value) = sfdiv {
             if sfmin.is_some() || sfmax.is_some() {
                 print!(", ")
             }
-            print!("min = {:1.0} RPM", value);
+            print!("min = {value:1.0} RPM");
         }
         print!(")");
     }
@@ -306,13 +306,13 @@ fn print_feature_pwm(feature: &Feature, label_length: usize) {
                 None => (),
                 _ => unimplemented!(),
             }
-            print!("mode = {}", value);
+            print!("mode = {value}");
         }
         if let Some(value) = sffreq {
             if sfmode.is_some() {
                 print!(", ")
             }
-            print!("freq = {:4.1} Hz", value);
+            print!("freq = {value:4.1} Hz");
         }
         print!(")");
     }
@@ -393,7 +393,7 @@ fn print_feature_temp(feature: &Feature, label_length: usize) {
         .subfeature(SubfeatureType::Temperature(Temperature::Input))
         .and_then(|sf| sf.read_value().ok())
     {
-        print!("{:+6.1}°C  ", input);
+        print!("{input:+6.1}°C  ");
     } else {
         print!("     N/A  ");
     }
@@ -429,7 +429,7 @@ fn print_feature_temp(feature: &Feature, label_length: usize) {
             _ => "unknown",
         };
 
-        print!("  sensor = {}", buff);
+        print!("  sensor = {buff}");
     }
 
     println!();
@@ -463,7 +463,7 @@ fn print_feature_volt(feature: &Feature, label_length: usize) {
         .subfeature(SubfeatureType::Voltage(Voltage::Input))
         .and_then(|sf| sf.read_value().ok())
     {
-        print!("{:+6.2} V  ", input);
+        print!("{input:+6.2} V  ");
     } else {
         print!("     N/A  ");
     }
@@ -507,7 +507,7 @@ fn print_feature_curr(feature: &Feature, label_length: usize) {
         .subfeature(SubfeatureType::Current(Current::Input))
         .and_then(|sf| sf.read_value().ok())
     {
-        print!("{:+6.2} A  ", input);
+        print!("{input:+6.2} A  ");
     } else {
         print!("     N/A  ");
     }
@@ -630,7 +630,7 @@ fn print_feature_energy(feature: &Feature, label_length: usize) {
             let mut unit = String::new();
             print_label(label.as_ref(), label_length);
             scale_value(&mut val, &mut unit);
-            println!("{:6.2} {}J", val, unit);
+            println!("{val:6.2} {unit}J");
             return;
         }
     }
@@ -643,7 +643,7 @@ fn print_feature_humidity(feature: &Feature, label_length: usize) {
         let label = feature.label();
         if let Ok(val) = sf.read_value() {
             print_label(label.as_ref(), label_length);
-            println!("{:6.1} %RH", val);
+            println!("{val:6.1} %RH");
         }
     }
 }
@@ -653,7 +653,7 @@ fn print_feature_cpu(feature: &Feature, label_length: usize) {
         let label = feature.label();
         if let Ok(val) = sf.read_value() {
             print_label(label.as_ref(), label_length);
-            println!("{:+6.3} V", val);
+            println!("{val:+6.3} V");
         }
     }
 }
