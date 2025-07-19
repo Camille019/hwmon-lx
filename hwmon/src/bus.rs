@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2018 Camille019
 // SPDX-License-Identifier: MPL-2.0
 
+use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
@@ -12,7 +13,7 @@ use crate::error::*;
 use crate::sysfs::*;
 
 #[allow(non_snake_case)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub enum BusType {
     I2C,
     ISA,
@@ -97,7 +98,7 @@ impl Bus {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub(crate) struct BusAdapter {
     name: String,
     bus_type: BusType,
@@ -146,31 +147,40 @@ impl BusAdapter {
     }
 }
 
-pub(crate) fn read_sysfs_busses() -> Result<Vec<BusAdapter>, Error> {
-    let mut res = Vec::new();
+pub(crate) fn read_sysfs_busses() -> Result<HashSet<BusAdapter>, Error> {
+    let mut res = HashSet::new();
+    let mut i2c_busses_dirs = Vec::new();
 
     let mut adapter_path = PathBuf::from(SYSFS_MOUNT);
     adapter_path.push("class/i2c-adapter");
+    i2c_busses_dirs.push(adapter_path);
 
-    if adapter_path.is_dir() {
-        for entry in fs::read_dir(adapter_path)? {
-            let entry = entry?;
-            let path = entry.path();
+    let mut i2c_path = PathBuf::from(SYSFS_MOUNT);
+    i2c_path.push("bus/i2c/devices");
+    i2c_busses_dirs.push(i2c_path);
 
-            if let Some(bus) = BusAdapter::from_sysfs_i2c(path.as_ref())? {
-                res.push(bus);
-            }
-        }
-    } else {
-        let mut i2c_path = PathBuf::from(SYSFS_MOUNT);
-        i2c_path.push("bus/i2c/devices");
+    for i2c_bus_dir in i2c_busses_dirs {
+        if i2c_bus_dir.is_dir() {
+            for entry in fs::read_dir(i2c_bus_dir)? {
+                let entry = entry?;
+                let path = entry.path();
 
-        for entry in fs::read_dir(i2c_path)? {
-            let entry = entry?;
-            let path = entry.path();
-
-            if let Some(bus) = BusAdapter::from_sysfs_i2c(path.as_ref())? {
-                res.push(bus);
+                match BusAdapter::from_sysfs_i2c(path.as_ref()) {
+                    Ok(bus) => {
+                        if let Some(bus) = bus {
+                            res.insert(bus);
+                        }
+                    }
+                    Err(error) => {
+                        if let Error::ParseBusName(bus) = error
+                            && bus == BusType::I2C
+                        {
+                            log::debug!("{path:?} is not a bus path (skipped)");
+                        } else {
+                            return Err(error);
+                        }
+                    }
+                }
             }
         }
     }

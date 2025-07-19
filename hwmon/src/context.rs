@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2018 Camille019
 // SPDX-License-Identifier: MPL-2.0
 
+use std::collections::HashSet;
 use std::path::Path;
 use std::rc::Rc;
 
@@ -9,7 +10,7 @@ use crate::error::*;
 
 #[derive(Clone)]
 pub struct Context {
-    adapters: Rc<Vec<BusAdapter>>,
+    adapters: Rc<HashSet<BusAdapter>>,
 }
 
 impl Context {
@@ -32,7 +33,7 @@ impl Context {
         Ok(Context { adapters })
     }
 
-    pub(crate) fn adapters(&self) -> &Vec<BusAdapter> {
+    pub(crate) fn adapters(&self) -> &HashSet<BusAdapter> {
         self.adapters.as_ref()
     }
 }
