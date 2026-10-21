@@ -22,12 +22,12 @@ compute = { "compute" ~ name ~ expr ~ "," ~ expr }
 ignore = { "ignore" ~ name }
 set = { "set" ~ name ~ expr }
 
-name = @{string}
+name = @{ string ~ &(WHITESPACE | NEWLINE | EOI) }
 string = @{ string_short | string_quoted }
 
 string_quoted = @{ "\"" ~ string_long ~ "\"" }
 string_short = ${ (ASCII_ALPHANUMERIC | "_")+ }
-string_long = ${ (!("\"" | NEWLINE) ~ ANY)* }
+string_long = ${ ("\\" ~ ANY | !("\"" | NEWLINE) ~ ANY)* }
 
 expr = { operand ~ (operator ~ operand)* }
 operand = _{ ("(" ~ expr ~ ")") | function | var }
