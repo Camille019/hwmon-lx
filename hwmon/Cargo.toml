@@ -16,6 +16,7 @@ categories = ["hardware-support", "os::unix-apis"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
+default = ["sensorsconf"]
 sensorsconf = ["dep:pest", "dep:pest_derive"]
 
 [dependencies]
