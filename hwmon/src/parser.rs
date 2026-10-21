@@ -16,8 +16,8 @@ use crate::error::Error;
 #[grammar = "conf.pest"]
 pub(crate) struct SensorsConfParser;
 
-#[derive(Debug, PartialEq)]
-enum Operator {
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum Operator {
     Add,
     Sub,
     Multiply,
@@ -25,7 +25,7 @@ enum Operator {
 }
 
 impl Operator {
-    fn eval(&self, left: f32, right: f32) -> f32 {
+    pub(crate) fn eval(&self, left: f32, right: f32) -> f32 {
         match self {
             Operator::Add => left + right,
             Operator::Sub => left - right,
@@ -35,15 +35,15 @@ impl Operator {
     }
 }
 
-#[derive(Debug, PartialEq)]
-enum Function {
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum Function {
     Inv,
     Exp,
     Ln,
 }
 
 impl Function {
-    fn eval(&self, arg: f32) -> f32 {
+    pub(crate) fn eval(&self, arg: f32) -> f32 {
         match self {
             Function::Inv => -arg,
             Function::Exp => arg.exp(),
@@ -52,8 +52,8 @@ impl Function {
     }
 }
 
-#[derive(Debug, Default, PartialEq)]
-enum Expr {
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) enum Expr {
     Fn(Function, Box<Expr>),
     Op(Operator, Box<Expr>, Box<Expr>),
     Literal(f32),
@@ -62,7 +62,7 @@ enum Expr {
 }
 
 impl Expr {
-    fn eval(&self, raw: f32) -> f32 {
+    pub(crate) fn eval(&self, raw: f32) -> f32 {
         match self {
             Expr::Fn(inner, expr) => inner.eval(expr.eval(raw)),
             Expr::Op(inner, left, right) => inner.eval(left.eval(raw), right.eval(raw)),
@@ -78,20 +78,38 @@ impl Expr {
 //    address: u32,
 //}
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct CfgFile {
     buses: Vec<StmtBus>,
     chips: Vec<StmtChip>,
 }
 
-#[derive(Debug, Default, PartialEq)]
-struct StmtBus {
+impl CfgFile {
+    pub(crate) fn buses(&self) -> &Vec<StmtBus> {
+        self.buses.as_ref()
+    }
+    pub(crate) fn chips(&self) -> &Vec<StmtChip> {
+        self.chips.as_ref()
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct StmtBus {
     number: String,
     adapter: String,
 }
 
-#[derive(Debug, Default, PartialEq)]
-struct StmtChip {
+impl StmtBus {
+    pub(crate) fn number(&self) -> &str {
+        self.number.as_ref()
+    }
+    pub(crate) fn adapter(&self) -> &str {
+        self.adapter.as_ref()
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct StmtChip {
     names: Vec<String>,
     labels: Vec<StmtLabel>,
     sets: Vec<StmtSet>,
@@ -99,28 +117,76 @@ struct StmtChip {
     ignores: Vec<StmtIgnore>,
 }
 
-#[derive(Debug, Default, PartialEq)]
-struct StmtLabel {
+impl StmtChip {
+    pub(crate) fn names(&self) -> &Vec<String> {
+        self.names.as_ref()
+    }
+    pub(crate) fn labels(&self) -> &Vec<StmtLabel> {
+        self.labels.as_ref()
+    }
+    pub(crate) fn sets(&self) -> &Vec<StmtSet> {
+        self.sets.as_ref()
+    }
+    pub(crate) fn computes(&self) -> &Vec<StmtCompute> {
+        self.computes.as_ref()
+    }
+    pub(crate) fn ignores(&self) -> &Vec<StmtIgnore> {
+        self.ignores.as_ref()
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct StmtLabel {
     name: String,
     value: String,
 }
 
-#[derive(Debug, Default, PartialEq)]
-struct StmtIgnore {
+impl StmtLabel {
+    pub(crate) fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+    pub(crate) fn value(&self) -> &str {
+        self.value.as_ref()
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct StmtIgnore {
     name: String,
 }
 
-#[derive(Debug, Default, PartialEq)]
-struct StmtCompute {
+impl StmtIgnore {
+    pub(crate) fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct StmtCompute {
     name: String,
     from_proc: Expr,
     to_proc: Expr,
 }
 
-#[derive(Debug, Default, PartialEq)]
-struct StmtSet {
+impl StmtCompute {
+    pub(crate) fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct StmtSet {
     name: String,
     value: Expr,
+}
+
+impl StmtSet {
+    pub(crate) fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+    pub(crate) fn value(&self) -> &Expr {
+        &self.value
+    }
 }
 
 static PRATT_PARSER: LazyLock<pest::pratt_parser::PrattParser<Rule>> = LazyLock::new(|| {
