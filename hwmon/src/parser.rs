@@ -135,6 +135,40 @@ static PRATT_PARSER: LazyLock<pest::pratt_parser::PrattParser<Rule>> = LazyLock:
         .op(Op::prefix(Rule::ln))
 });
 
+/// Decode the escape sequences allowed in quoted strings.
+///
+/// Known C-like escapes are translated to their corresponding character.
+/// Any other escaped character is taken literally, so `\?` yields `?`.
+fn unescape(string: &str) -> String {
+    let mut result = String::with_capacity(string.len());
+    let mut chars = string.chars();
+
+    while let Some(c) = chars.next() {
+        if c != '\\' {
+            result.push(c);
+            continue;
+        }
+
+        match chars.next() {
+            Some('a') => result.push('\x07'),
+            Some('b') => result.push('\x08'),
+            Some('f') => result.push('\x0C'),
+            Some('n') => result.push('\n'),
+            Some('r') => result.push('\r'),
+            Some('t') => result.push('\t'),
+            Some('v') => result.push('\x0B'),
+            Some(c) => result.push(c),
+            None => result.push('\\'),
+        }
+    }
+
+    result
+}
+
+fn parse_string(pair: Pair<Rule>) -> String {
+    unescape(pair.into_inner().next().unwrap().as_span().as_str())
+}
+
 fn parse_pexpr(pexpr: Pair<Rule>) -> Expr {
     debug_assert!(pexpr.as_rule() == Rule::expr);
 
@@ -169,13 +203,7 @@ fn parse_pcompute(pcompute: Pair<Rule>) -> StmtCompute {
     let mut pcompute_inner = pcompute.into_inner();
 
     let pname = pcompute_inner.next().unwrap();
-    compute.name = pname
-        .into_inner()
-        .next()
-        .unwrap()
-        .as_span()
-        .as_str()
-        .to_string();
+    compute.name = parse_string(pname);
 
     let pfrom = pcompute_inner.next().unwrap();
     compute.from_proc = parse_pexpr(pfrom);
@@ -190,13 +218,7 @@ fn parse_pignore(pignore: Pair<Rule>) -> StmtIgnore {
     debug_assert!(pignore.as_rule() == Rule::ignore);
 
     StmtIgnore {
-        name: pignore
-            .into_inner()
-            .next()
-            .unwrap()
-            .as_span()
-            .as_str()
-            .to_string(),
+        name: parse_string(pignore),
     }
 }
 
@@ -208,22 +230,10 @@ fn parse_plabel(plabel: Pair<Rule>) -> StmtLabel {
     for pair in plabel.into_inner() {
         match pair.as_rule() {
             Rule::name => {
-                label.name = pair
-                    .into_inner()
-                    .next()
-                    .unwrap()
-                    .as_span()
-                    .as_str()
-                    .to_string();
+                label.name = parse_string(pair);
             }
             Rule::string => {
-                label.value = pair
-                    .into_inner()
-                    .next()
-                    .unwrap()
-                    .as_span()
-                    .as_str()
-                    .to_string();
+                label.value = parse_string(pair);
             }
             _ => {
                 log::debug!("Found bad pair: {:#?}", pair);
@@ -243,13 +253,7 @@ fn parse_pset(pset: Pair<Rule>) -> StmtSet {
     for pair in pset.into_inner() {
         match pair.as_rule() {
             Rule::name => {
-                set.name = pair
-                    .into_inner()
-                    .next()
-                    .unwrap()
-                    .as_span()
-                    .as_str()
-                    .to_string();
+                set.name = parse_string(pair);
             }
             Rule::expr => {
                 set.value = parse_pexpr(pair);
@@ -272,8 +276,8 @@ fn parse_pchip(pchip: Pair<Rule>) -> StmtChip {
     for pair in pchip.into_inner() {
         match pair.as_rule() {
             Rule::name => {
-                let name = pair.into_inner().next().unwrap().as_span().as_str();
-                chip.names.push(String::from(name));
+                let name = parse_string(pair);
+                chip.names.push(name);
             }
             Rule::compute => {
                 let compute = parse_pcompute(pair);
@@ -309,22 +313,10 @@ fn parse_pbus(pbus: Pair<Rule>) -> StmtBus {
     for pair in pbus.into_inner() {
         match pair.as_rule() {
             Rule::name => {
-                bus.number = pair
-                    .into_inner()
-                    .next()
-                    .unwrap()
-                    .as_span()
-                    .as_str()
-                    .to_string();
+                bus.number = parse_string(pair);
             }
             Rule::string => {
-                bus.adapter = pair
-                    .into_inner()
-                    .next()
-                    .unwrap()
-                    .as_span()
-                    .as_str()
-                    .to_string();
+                bus.adapter = parse_string(pair);
             }
             _ => {
                 log::debug!("Found bad pair: {:#?}", pair);
