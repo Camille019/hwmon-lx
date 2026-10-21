@@ -96,7 +96,7 @@ impl Chip {
     }
 
     /// An iterator visiting all features in arbitrary order.
-    pub fn features_iter(&self) -> FeatureIter {
+    pub fn features_iter(&self) -> FeatureIter<'_> {
         FeatureIter {
             inner: self.features.values(),
         }
@@ -167,7 +167,7 @@ impl Chip {
                     .push_subfeature(subfeature)
                     .unwrap();
             } else {
-                log::debug!("Skip file {:?}", &path);
+                log::debug!("Skip file {:?}", path);
             }
         }
 

@@ -5,8 +5,9 @@ use std::fs;
 use std::path::Path;
 use std::sync::LazyLock;
 
-use pest::iterators::Pair;
 use pest::Parser;
+use pest::iterators::Pair;
+
 use pest_derive::Parser;
 
 use crate::error::Error;
@@ -63,8 +64,8 @@ enum Expr {
 impl Expr {
     fn eval(&self, raw: f32) -> f32 {
         match self {
-            Expr::Fn(ref inner, ref expr) => inner.eval(expr.eval(raw)),
-            Expr::Op(ref inner, ref left, ref right) => inner.eval(left.eval(raw), right.eval(raw)),
+            Expr::Fn(inner, expr) => inner.eval(expr.eval(raw)),
+            Expr::Op(inner, left, right) => inner.eval(left.eval(raw), right.eval(raw)),
             Expr::Literal(inner) => *inner,
             Expr::Raw => raw,
         }
@@ -188,7 +189,7 @@ fn parse_pcompute(pcompute: Pair<Rule>) -> StmtCompute {
 fn parse_pignore(pignore: Pair<Rule>) -> StmtIgnore {
     debug_assert!(pignore.as_rule() == Rule::ignore);
 
-    let ignore = StmtIgnore {
+    StmtIgnore {
         name: pignore
             .into_inner()
             .next()
@@ -196,9 +197,7 @@ fn parse_pignore(pignore: Pair<Rule>) -> StmtIgnore {
             .as_span()
             .as_str()
             .to_string(),
-    };
-
-    ignore
+    }
 }
 
 fn parse_plabel(plabel: Pair<Rule>) -> StmtLabel {

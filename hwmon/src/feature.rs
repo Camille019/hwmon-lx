@@ -99,7 +99,7 @@ impl Feature {
     }
 
     /// An iterator visiting all subfeatures in arbitrary order.
-    pub fn subfeatures_iter(&self) -> SubfeatureIter {
+    pub fn subfeatures_iter(&self) -> SubfeatureIter<'_> {
         SubfeatureIter {
             inner: self.subfeatures.iter(),
         }
