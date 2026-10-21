@@ -199,11 +199,23 @@ mod tests {
 
         let path = std::path::PathBuf::from("/sys/bus/i2c/devices/i2c-9191/");
         assert_eq!(BusAdapter::from_sysfs_i2c(path.as_path()).unwrap(), None);
+    }
 
-        let path = std::path::PathBuf::from("/sys/class/i2c-adapter/i2c-0/");
-        assert_ne!(BusAdapter::from_sysfs_i2c(path.as_path()).unwrap(), None);
+    #[test]
+    fn bus_adapter_from_sysfs_i2c_regular() {
+        use super::BusAdapter;
+        use std::fs;
 
-        let path = std::path::PathBuf::from("/sys/class/i2c-adapter/i2c-0/");
-        assert_ne!(BusAdapter::from_sysfs_i2c(path.as_path()).unwrap(), None);
+        let root = std::env::temp_dir().join(format!("hwmon-lx-bus-test-{}", std::process::id()));
+        let path = root.join("i2c-0");
+        fs::create_dir_all(&path).unwrap();
+        fs::write(path.join("name"), "Fake adapter\n").unwrap();
+
+        let adapter = BusAdapter::from_sysfs_i2c(path.as_path()).unwrap().unwrap();
+        assert_eq!(adapter.name(), "Fake adapter");
+        assert_eq!(adapter.bus_type(), super::BusType::I2C);
+        assert_eq!(adapter.bus_number(), 0);
+
+        fs::remove_dir_all(&root).unwrap();
     }
 }
