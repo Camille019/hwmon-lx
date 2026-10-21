@@ -190,7 +190,8 @@ fn get_chip_bus_from_name(
 
             let args: Vec<&str> = device_name.split('-').collect();
 
-            bus_number = i16::from_str(args.first().ok_or(ChipError::ParseBusInfo(BusType::SCSI))?)?;
+            bus_number =
+                i16::from_str(args.first().ok_or(ChipError::ParseBusInfo(BusType::SCSI))?)?;
             address = u32::from_str_radix(
                 args.get(1).ok_or(ChipError::ParseBusInfo(BusType::SCSI))?,
                 16,
@@ -277,7 +278,8 @@ fn get_chip_bus_from_name(
             )?;
 
             address = (_bus << 8) + (_slot << 4) + _fn;
-            bus_number = i16::from_str(args.first().ok_or(ChipError::ParseBusInfo(BusType::SCSI))?)?;
+            bus_number =
+                i16::from_str(args.first().ok_or(ChipError::ParseBusInfo(BusType::SCSI))?)?;
             bus_type = BusType::SCSI;
         }
         "platform" | "of_platform" => {
