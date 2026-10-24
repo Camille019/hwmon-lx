@@ -993,4 +993,20 @@ chip "lm78-*"
         assert_eq!(config.label_of("fan1"), Some("Fan"));
         assert_eq!(config.label_of("temp1"), None);
     }
+
+    #[test]
+    fn compute_statement_evaluates_both_ways() {
+        let cfg_str = r#"
+chip "lm78-*"
+    compute in1 @ * 2 + 1, (@ - 1) / 2
+"#;
+        let conf = parse_configuration_str(cfg_str).unwrap();
+        let config = conf.chip_config("lm78-isa-0290").unwrap();
+        let compute = config.compute_of("in1").unwrap();
+
+        assert_eq!(compute.eval_from(1.0), 3.0);
+        assert_eq!(compute.eval_to(3.0), 1.0);
+        assert_eq!(compute.statement(), "compute in1 @ * 2 + 1, (@ - 1) / 2");
+        assert!(config.compute_of("in2").is_none());
+    }
 }
