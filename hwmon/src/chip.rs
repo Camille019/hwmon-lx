@@ -170,7 +170,9 @@ impl Chip {
         {
             let path = entry.path();
 
-            if let Ok((feature_number, subfeature)) = Subfeature::from_path(&path) {
+            if let Ok((feature_number, subfeature)) =
+                Subfeature::from_path(&path, self.config.as_ref())
+            {
                 let feature_type = FeatureType::from(subfeature.get_type());
                 let feature_path = self.path.as_ref();
 

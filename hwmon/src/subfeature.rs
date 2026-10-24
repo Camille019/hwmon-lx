@@ -16,6 +16,9 @@ use crate::prefix::si::*;
 use crate::ratio::Ratio;
 use crate::sysfs::*;
 
+#[cfg(feature = "sensorsconf")]
+use crate::parser::{StmtChip, StmtCompute};
+
 type SubfeatureTypeMap = HashMap<&'static str, SubfeatureType>;
 
 macro_rules! make_subfeatures {
@@ -275,6 +278,13 @@ impl SubfeatureType {
             SubfeatureType::BeepEnable => false,
         }
     }
+
+    /// Return `true` if compute statements can apply to this subfeature.
+    ///
+    /// As in libsensors, alarms, CPU VID and beep-enable are left out.
+    pub(crate) fn supports_compute(self) -> bool {
+        !self.is_alarm() && !matches!(self, SubfeatureType::Cpu | SubfeatureType::BeepEnable)
+    }
 }
 
 static CPU_MAP: LazyLock<SubfeatureTypeMap> = LazyLock::new(|| {
@@ -312,6 +322,8 @@ pub struct Subfeature {
     compute_statement: Option<String>,
     is_readable: bool,
     is_writable: bool,
+    #[cfg(feature = "sensorsconf")]
+    compute: Option<StmtCompute>,
 }
 
 impl Subfeature {
@@ -349,8 +361,14 @@ impl Subfeature {
     /// Read the value of the subfeature.
     pub fn read_value(&self) -> Result<f64, Error> {
         if self.is_readable() {
-            // TODO compute statement
-            self.read_sysfs_value()
+            let mut value = self.read_sysfs_value()?;
+
+            #[cfg(feature = "sensorsconf")]
+            if let Some(compute) = &self.compute {
+                value = compute.eval_from(value);
+            }
+
+            Ok(value)
         } else {
             Err(Error::Access("Subfeature not readable"))
         }
@@ -364,10 +382,11 @@ impl Subfeature {
     /// Affect a new value at your own risk.
     /// See hwmon and device driver documentation for more information.
     pub fn write_value(&self, value: f64) -> Result<(), Error> {
-        if self.is_writable() {
-            // TODO compute statement
-            self.write_sysfs_value(value)?;
-            Ok(())
+        if !self.is_writable() {
+            #[cfg(feature = "sensorsconf")]
+            let value = self.compute.as_ref().map_or(value, |c| c.eval_to(value));
+
+            Ok(self.write_sysfs_value(value)?)
         } else {
             Err(Error::Access("Subfeature not writable"))
         }
@@ -393,7 +412,10 @@ impl Subfeature {
         write!(file, "{}", self.subfeature_type.to_native(value))
     }
 
-    pub(crate) fn from_path<P: AsRef<Path>>(path: P) -> Result<(u32, Subfeature), SubfeatureError> {
+    pub(crate) fn from_path<P: AsRef<Path>>(
+        path: P,
+        #[cfg(feature = "sensorsconf")] chip_config: Option<&StmtChip>,
+    ) -> Result<(u32, Subfeature), SubfeatureError> {
         let path = path.as_ref();
         if !path.exists() {
             return Err(SubfeatureError::Invalid);
@@ -407,6 +429,14 @@ impl Subfeature {
         let is_readable = (st_mode & libc::S_IRUSR) == libc::S_IRUSR;
         let is_writable = (st_mode & libc::S_IWUSR) == libc::S_IWUSR;
 
+        let compute = if subfeature_type.supports_compute() {
+            let feature_type = FeatureType::from(subfeature_type);
+            let feature_name = feature_type.sysfs_name(feature_number);
+            chip_config.and_then(|c| c.compute_of(feature_name.as_str()).cloned())
+        } else {
+            None
+        };
+
         Ok((
             feature_number,
             Subfeature {
@@ -416,6 +446,8 @@ impl Subfeature {
                 compute_statement: None, // TODO compute statement
                 is_readable,
                 is_writable,
+                #[cfg(feature = "sensorsconf")]
+                compute,
             },
         ))
     }
@@ -442,5 +474,37 @@ impl Subfeature {
         } else {
             Err(SubfeatureError::Unknown)
         }
+    }
+}
+
+#[cfg(all(test, feature = "sensorsconf"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn read_and_write_values_apply_compute() {
+        let conf = crate::parser::parse_configuration_str(
+            r#"
+chip "test-*"
+    compute in0 @ * 2 + 1, (@ - 1) / 2
+"#,
+        )
+        .unwrap();
+        let chip_config = conf.chip_config("test-isa-0000");
+
+        let dir = std::env::temp_dir().join(format!("hwmon-compute-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("in0_input");
+        std::fs::write(&path, "1000\n").unwrap();
+
+        let (_, subfeature) = Subfeature::from_path(&path, chip_config).unwrap();
+
+        // 1000 mV is 1 V, which the compute statement turns into 3.
+        assert_eq!(subfeature.read_value().unwrap(), 3.0);
+
+        subfeature.write_value(3.0).unwrap();
+        assert_eq!(std::fs::read_to_string(&path).unwrap().trim(), "1000");
+
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

@@ -160,6 +160,16 @@ impl StmtChip {
         self.ignores.iter().any(|stmt| stmt.name() == feature_name)
     }
 
+    /// Return the compute statement configured for the given feature name, if any.
+    ///
+    /// When several `compute` statements apply to the same name, the first one
+    /// in the file is returned.
+    pub(crate) fn compute_of(&self, feature_name: &str) -> Option<&StmtCompute> {
+        self.computes
+            .iter()
+            .find(|compute| compute.name() == feature_name)
+    }
+
     fn matches_by_name(&self, name: &str) -> bool {
         self.names
             .iter()
@@ -203,6 +213,14 @@ pub(crate) struct StmtCompute {
 impl StmtCompute {
     pub(crate) fn name(&self) -> &str {
         self.name.as_ref()
+    }
+    /// Evaluate the expression converting a raw value to a real-world value.
+    pub(crate) fn eval_from(&self, raw: f64) -> f64 {
+        self.from_proc.eval(raw)
+    }
+    /// Evaluate the expression converting a real-world value back to a raw value.
+    pub(crate) fn eval_to(&self, value: f64) -> f64 {
+        self.to_proc.eval(value)
     }
 }
 
