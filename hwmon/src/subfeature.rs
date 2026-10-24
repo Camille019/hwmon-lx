@@ -388,7 +388,7 @@ impl Subfeature {
     /// Affect a new value at your own risk.
     /// See hwmon and device driver documentation for more information.
     pub fn write_value(&self, value: f64) -> Result<(), Error> {
-        if !self.is_writable() {
+        if self.is_writable() {
             #[cfg(feature = "sensorsconf")]
             let value = self.compute.as_ref().map_or(value, |c| c.eval_to(value));
 
