@@ -319,7 +319,6 @@ pub struct Subfeature {
     name: String,
     path: PathBuf,
     subfeature_type: SubfeatureType,
-    compute_statement: Option<String>,
     is_readable: bool,
     is_writable: bool,
     #[cfg(feature = "sensorsconf")]
@@ -345,7 +344,14 @@ impl Subfeature {
     /// Return the compute statement string if specified in the configuration file.
     /// Otherwise it return None.
     pub fn compute_statement(&self) -> Option<String> {
-        self.compute_statement.clone()
+        #[cfg(feature = "sensorsconf")]
+        {
+            self.compute
+                .as_ref()
+                .map(|compute| compute.statement().to_owned())
+        }
+        #[cfg(not(feature = "sensorsconf"))]
+        None
     }
 
     /// Return `true` if the subfeature is readable
@@ -443,7 +449,6 @@ impl Subfeature {
                 name: name.to_string(),
                 path: path.to_path_buf(),
                 subfeature_type,
-                compute_statement: None, // TODO compute statement
                 is_readable,
                 is_writable,
                 #[cfg(feature = "sensorsconf")]

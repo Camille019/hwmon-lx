@@ -206,6 +206,7 @@ impl StmtIgnore {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct StmtCompute {
     name: String,
+    statement: String,
     from_proc: Expr,
     to_proc: Expr,
 }
@@ -213,6 +214,10 @@ pub(crate) struct StmtCompute {
 impl StmtCompute {
     pub(crate) fn name(&self) -> &str {
         self.name.as_ref()
+    }
+    /// The statement as written in the configuration file.
+    pub(crate) fn statement(&self) -> &str {
+        self.statement.as_ref()
     }
     /// Evaluate the expression converting a raw value to a real-world value.
     pub(crate) fn eval_from(&self, raw: f64) -> f64 {
@@ -347,7 +352,10 @@ fn parse_pexpr(pexpr: Pair<Rule>) -> Expr {
 fn parse_pcompute(pcompute: Pair<Rule>) -> StmtCompute {
     debug_assert!(pcompute.as_rule() == Rule::compute);
 
-    let mut compute = StmtCompute::default();
+    let mut compute = StmtCompute {
+        statement: pcompute.as_str().to_owned(),
+        ..Default::default()
+    };
 
     let mut pcompute_inner = pcompute.into_inner();
 
