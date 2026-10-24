@@ -145,6 +145,17 @@ impl StmtChip {
         self.ignores.as_ref()
     }
 
+    /// Return the label configured for the given feature name, if any.
+    ///
+    /// When several `label` statements apply to the same name, the first one
+    /// in the file is returned.
+    pub(crate) fn label_of(&self, feature_name: &str) -> Option<&str> {
+        self.labels
+            .iter()
+            .find(|label| label.name() == feature_name)
+            .map(StmtLabel::value)
+    }
+
     fn matches_by_name(&self, name: &str) -> bool {
         self.names
             .iter()
@@ -935,5 +946,21 @@ chip "nothing-*"
         assert!(conf.chip_config("nothing-isa-0000").is_some());
         assert!(conf.chip_config("other-i2c-0-2d").is_none());
         assert!(conf.chip_config("otherchip-i2c-0-2d").is_none());
+    }
+
+    #[test]
+    fn chip_label_returns_first_match() {
+        let cfg_str = r#"
+chip "lm78-*"
+    label in0 "Voltage 0"
+    label in0 "Main voltage"
+    label fan1 "Fan"
+"#;
+        let conf = parse_configuration_str(cfg_str).unwrap();
+        let config = conf.chip_config("lm78-isa-0290").unwrap();
+
+        assert_eq!(config.label_of("in0"), Some("Voltage 0"));
+        assert_eq!(config.label_of("fan1"), Some("Fan"));
+        assert_eq!(config.label_of("temp1"), None);
     }
 }

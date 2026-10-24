@@ -9,6 +9,9 @@ use crate::error::*;
 use crate::subfeature::{Subfeature, SubfeatureType};
 use crate::sysfs;
 
+#[cfg(feature = "sensorsconf")]
+use crate::parser::StmtChip;
+
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum FeatureType {
     Fan,
@@ -61,6 +64,7 @@ pub struct Feature {
     number: u32,
     feature_type: FeatureType,
     subfeatures: Vec<Subfeature>,
+    label_override: Option<String>,
 }
 
 impl Feature {
@@ -82,9 +86,9 @@ impl Feature {
     /// Look up the label of the feature in config files or in sysfs.
     /// If no label exists for this feature, its name is returned itself.
     pub fn label(&self) -> String {
-        // TODO check user specified label
-
-        if let Ok(label) = self.read_sysfs_label() {
+        if let Some(ref label) = self.label_override {
+            label.clone()
+        } else if let Ok(label) = self.read_sysfs_label() {
             label
         } else {
             self.name.to_owned()
@@ -105,7 +109,12 @@ impl Feature {
         }
     }
 
-    pub(crate) fn new(dir: &Path, feature_type: FeatureType, number: u32) -> Feature {
+    pub(crate) fn new(
+        dir: &Path,
+        feature_type: FeatureType,
+        number: u32,
+        #[cfg(feature = "sensorsconf")] config: Option<&StmtChip>,
+    ) -> Feature {
         let name = match feature_type {
             FeatureType::Voltage => format!("in{number}"),
             FeatureType::Fan => format!("fan{number}"),
@@ -120,12 +129,18 @@ impl Feature {
             FeatureType::BeepEnable => String::from("beep_enable"),
         };
 
+        #[cfg(feature = "sensorsconf")]
+        let label_override = config.and_then(|c| c.label_of(&name).map(str::to_string));
+        #[cfg(not(feature = "sensorsconf"))]
+        let label_override = None;
+
         Feature {
             dir: dir.to_owned(),
             name,
             number,
             feature_type,
             subfeatures: Default::default(),
+            label_override,
         }
     }
 
@@ -148,5 +163,38 @@ impl Feature {
     fn read_sysfs_label(&self) -> io::Result<String> {
         let attr = format!("{}_label", self.name);
         sysfs::sysfs_read_attr(self.dir.as_ref(), attr.as_ref())
+    }
+}
+
+#[cfg(all(test, feature = "sensorsconf"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn label_prefers_chip_configuration() {
+        let conf = crate::parser::parse_configuration_str(
+            r#"
+chip "lm78-*"
+    label in0 "Main voltage"
+"#,
+        )
+        .unwrap();
+        let config = conf.chip_config("lm78-isa-0290").unwrap();
+
+        let feature = Feature::new(
+            Path::new("/dev/null"),
+            FeatureType::Voltage,
+            0,
+            Some(config),
+        );
+
+        assert_eq!(feature.label(), "Main voltage");
+    }
+
+    #[test]
+    fn label_falls_back_to_feature_name() {
+        let feature = Feature::new(Path::new("/dev/null"), FeatureType::Voltage, 0, None);
+
+        assert_eq!(feature.label(), "in0");
     }
 }

@@ -95,15 +95,6 @@ impl Chip {
         }
     }
 
-    /// Return the configuration statement applying to this chip, if any.
-    ///
-    /// The statement is matched against `name()` when the chip is created.
-    #[cfg(feature = "sensorsconf")]
-    #[allow(dead_code)] // Will be used by feature label/compute lookup.
-    pub(crate) fn config(&self) -> Option<&StmtChip> {
-        self.config.as_ref()
-    }
-
     /// Return the feature of the given type, if it exists, `None` otherwise.
     pub fn feature(&self, ftype: FeatureType, number: u32) -> Option<&Feature> {
         self.features.get(&(ftype, number))
@@ -185,7 +176,15 @@ impl Chip {
 
                 self.features
                     .entry((feature_type, feature_number))
-                    .or_insert_with(|| Feature::new(feature_path, feature_type, feature_number))
+                    .or_insert_with(|| {
+                        Feature::new(
+                            feature_path,
+                            feature_type,
+                            feature_number,
+                            #[cfg(feature = "sensorsconf")]
+                            self.config.as_ref(),
+                        )
+                    })
                     .push_subfeature(subfeature)
                     .unwrap();
             } else {
