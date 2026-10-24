@@ -156,6 +156,10 @@ impl StmtChip {
             .map(StmtLabel::value)
     }
 
+    pub(crate) fn is_ignored(&self, feature_name: &str) -> bool {
+        self.ignores.iter().any(|stmt| stmt.name() == feature_name)
+    }
+
     fn matches_by_name(&self, name: &str) -> bool {
         self.names
             .iter()

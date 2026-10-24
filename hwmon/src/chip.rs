@@ -174,19 +174,31 @@ impl Chip {
                 let feature_type = FeatureType::from(subfeature.get_type());
                 let feature_path = self.path.as_ref();
 
-                self.features
-                    .entry((feature_type, feature_number))
-                    .or_insert_with(|| {
-                        Feature::new(
-                            feature_path,
-                            feature_type,
-                            feature_number,
-                            #[cfg(feature = "sensorsconf")]
-                            self.config.as_ref(),
-                        )
-                    })
-                    .push_subfeature(subfeature)
-                    .unwrap();
+                let feature = Feature::new(
+                    feature_path,
+                    feature_type,
+                    feature_number,
+                    #[cfg(feature = "sensorsconf")]
+                    self.config.as_ref(),
+                );
+
+                #[cfg(feature = "sensorsconf")]
+                let ignored = self
+                    .config
+                    .as_ref()
+                    .is_some_and(|c| c.is_ignored(feature.name()));
+                #[cfg(not(feature = "sensorsconf"))]
+                let ignored = false;
+
+                if !ignored {
+                    self.features
+                        .entry((feature_type, feature_number))
+                        .or_insert(feature)
+                        .push_subfeature(subfeature)
+                        .unwrap();
+                } else {
+                    log::info!("Ignore feature '{}'", feature.name());
+                }
             } else {
                 log::debug!("Skip file {:?}", path);
             }
