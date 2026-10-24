@@ -88,9 +88,6 @@ impl CfgFile {
     pub(crate) fn buses(&self) -> &Vec<StmtBus> {
         self.buses.as_ref()
     }
-    pub(crate) fn chips(&self) -> &Vec<StmtChip> {
-        self.chips.as_ref()
-    }
     /// Find the configuration statement matching the given chip name.
     ///
     /// Chip names in the configuration file may contain `*` wildcards, as
@@ -129,20 +126,8 @@ pub(crate) struct StmtChip {
 }
 
 impl StmtChip {
-    pub(crate) fn names(&self) -> &Vec<String> {
-        self.names.as_ref()
-    }
-    pub(crate) fn labels(&self) -> &Vec<StmtLabel> {
-        self.labels.as_ref()
-    }
     pub(crate) fn sets(&self) -> &Vec<StmtSet> {
         self.sets.as_ref()
-    }
-    pub(crate) fn computes(&self) -> &Vec<StmtCompute> {
-        self.computes.as_ref()
-    }
-    pub(crate) fn ignores(&self) -> &Vec<StmtIgnore> {
-        self.ignores.as_ref()
     }
 
     /// Return the label configured for the given feature name, if any.
