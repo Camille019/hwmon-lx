@@ -25,7 +25,7 @@ pub(crate) enum Operator {
 }
 
 impl Operator {
-    pub(crate) fn eval(&self, left: f32, right: f32) -> f32 {
+    pub(crate) fn eval(&self, left: f64, right: f64) -> f64 {
         match self {
             Operator::Add => left + right,
             Operator::Sub => left - right,
@@ -43,7 +43,7 @@ pub(crate) enum Function {
 }
 
 impl Function {
-    pub(crate) fn eval(&self, arg: f32) -> f32 {
+    pub(crate) fn eval(&self, arg: f64) -> f64 {
         match self {
             Function::Inv => -arg,
             Function::Exp => arg.exp(),
@@ -56,13 +56,13 @@ impl Function {
 pub(crate) enum Expr {
     Fn(Function, Box<Expr>),
     Op(Operator, Box<Expr>, Box<Expr>),
-    Literal(f32),
+    Literal(f64),
     #[default]
     Raw,
 }
 
 impl Expr {
-    pub(crate) fn eval(&self, raw: f32) -> f32 {
+    pub(crate) fn eval(&self, raw: f64) -> f64 {
         match self {
             Expr::Fn(inner, expr) => inner.eval(expr.eval(raw)),
             Expr::Op(inner, left, right) => inner.eval(left.eval(raw), right.eval(raw)),
@@ -306,7 +306,7 @@ fn parse_pexpr(pexpr: Pair<Rule>) -> Expr {
     PRATT_PARSER
         .map_primary(|primary| match primary.as_rule() {
             Rule::raw => Expr::Raw,
-            Rule::num => Expr::Literal(primary.as_str().parse::<f32>().unwrap()),
+            Rule::num => Expr::Literal(primary.as_str().parse::<f64>().unwrap()),
             Rule::expr => parse_pexpr(primary),
             _ => unreachable!(),
         })
