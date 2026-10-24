@@ -27,6 +27,25 @@ pub enum FeatureType {
     BeepEnable,
 }
 
+impl FeatureType {
+    /// Return the name of the feature as it appears in sysfs.
+    pub(crate) fn sysfs_name(self, number: u32) -> String {
+        match self {
+            FeatureType::Voltage => format!("in{number}"),
+            FeatureType::Fan => format!("fan{number}"),
+            FeatureType::Pwm => format!("pwm{number}"),
+            FeatureType::Temperature => format!("temp{number}"),
+            FeatureType::Power => format!("power{number}"),
+            FeatureType::Energy => format!("energy{number}"),
+            FeatureType::Current => format!("curr{number}"),
+            FeatureType::Humidity => format!("humidity{number}"),
+            FeatureType::Cpu => format!("cpu{number}_vid"),
+            FeatureType::Intrusion => format!("intrusion{number}"),
+            FeatureType::BeepEnable => String::from("beep_enable"),
+        }
+    }
+}
+
 impl From<SubfeatureType> for FeatureType {
     fn from(sf_type: SubfeatureType) -> FeatureType {
         match sf_type {
@@ -115,19 +134,7 @@ impl Feature {
         number: u32,
         #[cfg(feature = "sensorsconf")] config: Option<&StmtChip>,
     ) -> Feature {
-        let name = match feature_type {
-            FeatureType::Voltage => format!("in{number}"),
-            FeatureType::Fan => format!("fan{number}"),
-            FeatureType::Pwm => format!("pwm{number}"),
-            FeatureType::Temperature => format!("temp{number}"),
-            FeatureType::Power => format!("power{number}"),
-            FeatureType::Energy => format!("energy{number}"),
-            FeatureType::Current => format!("curr{number}"),
-            FeatureType::Humidity => format!("humidity{number}"),
-            FeatureType::Cpu => format!("cpu{number}_vid"),
-            FeatureType::Intrusion => format!("intrusion{number}"),
-            FeatureType::BeepEnable => String::from("beep_enable"),
-        };
+        let name = feature_type.sysfs_name(number);
 
         #[cfg(feature = "sensorsconf")]
         let label_override = config.and_then(|c| c.label_of(&name).map(str::to_string));
