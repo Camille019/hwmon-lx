@@ -55,4 +55,10 @@ impl Context {
     pub(crate) fn adapters(&self) -> &HashSet<BusAdapter> {
         self.adapters.as_ref()
     }
+
+    /// The configuration parsed from the sensors.conf file(s).
+    #[cfg(feature = "sensorsconf")]
+    pub(crate) fn config(&self) -> &CfgFile {
+        self.config.as_ref()
+    }
 }

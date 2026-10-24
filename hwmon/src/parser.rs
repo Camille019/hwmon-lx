@@ -91,6 +91,17 @@ impl CfgFile {
     pub(crate) fn chips(&self) -> &Vec<StmtChip> {
         self.chips.as_ref()
     }
+    /// Find the configuration statement matching the given chip name.
+    ///
+    /// Chip names in the configuration file may contain `*` wildcards, as
+    /// described in sensors.conf(5). When several statements match, the
+    /// last one in the file is returned, as libsensors does.
+    pub(crate) fn chip_config(&self, chip_name: &str) -> Option<&StmtChip> {
+        self.chips
+            .iter()
+            .rev()
+            .find(|chip| chip.matches_by_name(chip_name))
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -132,6 +143,12 @@ impl StmtChip {
     }
     pub(crate) fn ignores(&self) -> &Vec<StmtIgnore> {
         self.ignores.as_ref()
+    }
+
+    fn matches_by_name(&self, name: &str) -> bool {
+        self.names
+            .iter()
+            .any(|pattern| chip_name_matches(pattern, name))
     }
 }
 
@@ -200,6 +217,39 @@ static PRATT_PARSER: LazyLock<pest::pratt_parser::PrattParser<Rule>> = LazyLock:
         .op(Op::prefix(Rule::exp))
         .op(Op::prefix(Rule::ln))
 });
+
+/// Match a chip name pattern against a chip name.
+///
+/// `*` matches any sequence of characters, including none, as in
+/// sensors.conf(5). All other characters are matched literally.
+fn chip_name_matches(pattern: &str, chip_name: &str) -> bool {
+    let pattern: Vec<char> = pattern.chars().collect();
+    let chip_name: Vec<char> = chip_name.chars().collect();
+
+    let mut pattern_index = 0;
+    let mut name_index = 0;
+    let mut star: Option<usize> = None;
+    let mut star_name_index = 0;
+
+    while name_index < chip_name.len() {
+        if pattern_index < pattern.len() && pattern[pattern_index] == chip_name[name_index] {
+            pattern_index += 1;
+            name_index += 1;
+        } else if pattern_index < pattern.len() && pattern[pattern_index] == '*' {
+            star = Some(pattern_index);
+            star_name_index = name_index;
+            pattern_index += 1;
+        } else if let Some(star_index) = star {
+            pattern_index = star_index + 1;
+            star_name_index += 1;
+            name_index = star_name_index;
+        } else {
+            return false;
+        }
+    }
+
+    pattern[pattern_index..].iter().all(|c| *c == '*')
+}
 
 /// Decode the escape sequences allowed in quoted strings.
 ///
@@ -847,5 +897,43 @@ chip "lm78-*"
     compute in3 @*(1+120/56) - 4.096*120/56, ^(@ + 4.096*120/56)/(1+120/56)
 "#;
         assert_eq!(parse_configuration_str(cfg_str).is_ok(), true);
+    }
+
+    #[test]
+    fn chip_name_matches_wildcards() {
+        assert!(chip_name_matches("*", "lm78-isa-0290"));
+        assert!(chip_name_matches("lm78-*", "lm78-isa-0290"));
+        assert!(chip_name_matches("*-isa-*", "lm78-isa-0290"));
+        assert!(chip_name_matches("*-0290", "lm78-isa-0290"));
+        assert!(chip_name_matches("lm78-*-0290", "lm78-isa-0290"));
+        assert!(chip_name_matches("lm78-isa-0290", "lm78-isa-0290"));
+
+        assert!(!chip_name_matches("lm79-*", "lm78-isa-0290"));
+        assert!(!chip_name_matches("*isa", "lm78-isa-0290"));
+        assert!(!chip_name_matches("lm78-isa", "lm78-isa-0290"));
+        assert!(!chip_name_matches("", "lm78-isa-0290"));
+    }
+
+    #[test]
+    fn chip_config_finds_last_matching_statement() {
+        let cfg_str = r#"
+chip "lm78-*"
+    label in0 "Voltage 0"
+chip "*-isa-*"
+    label in0 "ISA voltage"
+chip "nothing-*"
+    label in0 "Nothing"
+"#;
+        let conf = parse_configuration_str(cfg_str).unwrap();
+
+        let config = conf.chip_config("lm78-isa-0290").unwrap();
+        assert_eq!(config.labels[0].value, "ISA voltage");
+
+        let config = conf.chip_config("lm78-i2c-0-2d").unwrap();
+        assert_eq!(config.labels[0].value, "Voltage 0");
+
+        assert!(conf.chip_config("nothing-isa-0000").is_some());
+        assert!(conf.chip_config("other-i2c-0-2d").is_none());
+        assert!(conf.chip_config("otherchip-i2c-0-2d").is_none());
     }
 }

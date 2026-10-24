@@ -14,6 +14,9 @@ use crate::feature::{Feature, FeatureType};
 use crate::subfeature::Subfeature;
 use crate::sysfs::*;
 
+#[cfg(feature = "sensorsconf")]
+use crate::parser::StmtChip;
+
 #[derive(Debug)]
 pub struct FeatureIter<'a> {
     inner: btree_map::Values<'a, (FeatureType, u32), Feature>,
@@ -33,6 +36,8 @@ pub struct Chip {
     bus: Bus,
     address: u32,
     features: btree_map::BTreeMap<(FeatureType, u32), Feature>,
+    #[cfg(feature = "sensorsconf")]
+    config: Option<StmtChip>,
 }
 
 impl Chip {
@@ -90,6 +95,15 @@ impl Chip {
         }
     }
 
+    /// Return the configuration statement applying to this chip, if any.
+    ///
+    /// The statement is matched against `name()` when the chip is created.
+    #[cfg(feature = "sensorsconf")]
+    #[allow(dead_code)] // Will be used by feature label/compute lookup.
+    pub(crate) fn config(&self) -> Option<&StmtChip> {
+        self.config.as_ref()
+    }
+
     /// Return the feature of the given type, if it exists, `None` otherwise.
     pub fn feature(&self, ftype: FeatureType, number: u32) -> Option<&Feature> {
         self.features.get(&(ftype, number))
@@ -136,7 +150,15 @@ impl Chip {
             bus,
             address,
             features: Default::default(),
+            #[cfg(feature = "sensorsconf")]
+            config: None,
         };
+
+        // Find the configuration statement matching this chip.
+        #[cfg(feature = "sensorsconf")]
+        {
+            chip.config = context.config().chip_config(&chip.name()).cloned();
+        }
 
         chip.read_dynamic_chip()?;
 
