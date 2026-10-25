@@ -5,6 +5,7 @@
 
 mod bus;
 mod chip;
+mod config;
 mod context;
 mod error;
 mod feature;
@@ -17,7 +18,7 @@ mod sysfs;
 mod parser;
 
 pub use crate::bus::{Bus, BusType};
-pub use crate::chip::{read_sysfs_chips, Chip, FeatureIter};
+pub use crate::chip::{Chip, FeatureIter, read_sysfs_chips};
 pub use crate::context::Context;
 pub use crate::error::Error;
 pub use crate::feature::{Feature, FeatureType, SubfeatureIter};

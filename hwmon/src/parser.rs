@@ -10,224 +10,15 @@ use pest::iterators::Pair;
 
 use pest_derive::Parser;
 
+pub(crate) use crate::config::{
+    CfgFile, Expr, Function, Operator, StmtBus, StmtChip, StmtCompute, StmtIgnore, StmtLabel,
+    StmtSet,
+};
 use crate::error::Error;
 
 #[derive(Parser)]
 #[grammar = "conf.pest"]
 pub(crate) struct SensorsConfParser;
-
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) enum Operator {
-    Add,
-    Sub,
-    Multiply,
-    Divide,
-}
-
-impl Operator {
-    pub(crate) fn eval(&self, left: f64, right: f64) -> f64 {
-        match self {
-            Operator::Add => left + right,
-            Operator::Sub => left - right,
-            Operator::Multiply => left * right,
-            Operator::Divide => left / right,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) enum Function {
-    Inv,
-    Exp,
-    Ln,
-}
-
-impl Function {
-    pub(crate) fn eval(&self, arg: f64) -> f64 {
-        match self {
-            Function::Inv => -arg,
-            Function::Exp => arg.exp(),
-            Function::Ln => arg.ln(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) enum Expr {
-    Fn(Function, Box<Expr>),
-    Op(Operator, Box<Expr>, Box<Expr>),
-    Literal(f64),
-    #[default]
-    Raw,
-}
-
-impl Expr {
-    pub(crate) fn eval(&self, raw: f64) -> f64 {
-        match self {
-            Expr::Fn(inner, expr) => inner.eval(expr.eval(raw)),
-            Expr::Op(inner, left, right) => inner.eval(left.eval(raw), right.eval(raw)),
-            Expr::Literal(inner) => *inner,
-            Expr::Raw => raw,
-        }
-    }
-}
-
-//struct ChipName {
-//    prefix: String,
-//    bus: Bus,
-//    address: u32,
-//}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct CfgFile {
-    buses: Vec<StmtBus>,
-    chips: Vec<StmtChip>,
-}
-
-impl CfgFile {
-    pub(crate) fn buses(&self) -> &Vec<StmtBus> {
-        self.buses.as_ref()
-    }
-    /// Find the configuration statement matching the given chip name.
-    ///
-    /// Chip names in the configuration file may contain `*` wildcards, as
-    /// described in sensors.conf(5). When several statements match, the
-    /// last one in the file is returned, as libsensors does.
-    pub(crate) fn chip_config(&self, chip_name: &str) -> Option<&StmtChip> {
-        self.chips
-            .iter()
-            .rev()
-            .find(|chip| chip.matches_by_name(chip_name))
-    }
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct StmtBus {
-    number: String,
-    adapter: String,
-}
-
-impl StmtBus {
-    pub(crate) fn number(&self) -> &str {
-        self.number.as_ref()
-    }
-    pub(crate) fn adapter(&self) -> &str {
-        self.adapter.as_ref()
-    }
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct StmtChip {
-    names: Vec<String>,
-    labels: Vec<StmtLabel>,
-    sets: Vec<StmtSet>,
-    computes: Vec<StmtCompute>,
-    ignores: Vec<StmtIgnore>,
-}
-
-impl StmtChip {
-    pub(crate) fn sets(&self) -> &Vec<StmtSet> {
-        self.sets.as_ref()
-    }
-
-    /// Return the label configured for the given feature name, if any.
-    ///
-    /// When several `label` statements apply to the same name, the first one
-    /// in the file is returned.
-    pub(crate) fn label_of(&self, feature_name: &str) -> Option<&str> {
-        self.labels
-            .iter()
-            .find(|label| label.name() == feature_name)
-            .map(StmtLabel::value)
-    }
-
-    pub(crate) fn is_ignored(&self, feature_name: &str) -> bool {
-        self.ignores.iter().any(|stmt| stmt.name() == feature_name)
-    }
-
-    /// Return the compute statement configured for the given feature name, if any.
-    ///
-    /// When several `compute` statements apply to the same name, the first one
-    /// in the file is returned.
-    pub(crate) fn compute_of(&self, feature_name: &str) -> Option<&StmtCompute> {
-        self.computes
-            .iter()
-            .find(|compute| compute.name() == feature_name)
-    }
-
-    fn matches_by_name(&self, name: &str) -> bool {
-        self.names
-            .iter()
-            .any(|pattern| chip_name_matches(pattern, name))
-    }
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct StmtLabel {
-    name: String,
-    value: String,
-}
-
-impl StmtLabel {
-    pub(crate) fn name(&self) -> &str {
-        self.name.as_ref()
-    }
-    pub(crate) fn value(&self) -> &str {
-        self.value.as_ref()
-    }
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct StmtIgnore {
-    name: String,
-}
-
-impl StmtIgnore {
-    pub(crate) fn name(&self) -> &str {
-        self.name.as_ref()
-    }
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct StmtCompute {
-    name: String,
-    statement: String,
-    from_proc: Expr,
-    to_proc: Expr,
-}
-
-impl StmtCompute {
-    pub(crate) fn name(&self) -> &str {
-        self.name.as_ref()
-    }
-    /// The statement as written in the configuration file.
-    pub(crate) fn statement(&self) -> &str {
-        self.statement.as_ref()
-    }
-    /// Evaluate the expression converting a raw value to a real-world value.
-    pub(crate) fn eval_from(&self, raw: f64) -> f64 {
-        self.from_proc.eval(raw)
-    }
-    /// Evaluate the expression converting a real-world value back to a raw value.
-    pub(crate) fn eval_to(&self, value: f64) -> f64 {
-        self.to_proc.eval(value)
-    }
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct StmtSet {
-    name: String,
-    value: Expr,
-}
-
-impl StmtSet {
-    pub(crate) fn name(&self) -> &str {
-        self.name.as_ref()
-    }
-    pub(crate) fn value(&self) -> &Expr {
-        &self.value
-    }
-}
 
 static PRATT_PARSER: LazyLock<pest::pratt_parser::PrattParser<Rule>> = LazyLock::new(|| {
     use pest::pratt_parser::Assoc;
@@ -240,39 +31,6 @@ static PRATT_PARSER: LazyLock<pest::pratt_parser::PrattParser<Rule>> = LazyLock:
         .op(Op::prefix(Rule::exp))
         .op(Op::prefix(Rule::ln))
 });
-
-/// Match a chip name pattern against a chip name.
-///
-/// `*` matches any sequence of characters, including none, as in
-/// sensors.conf(5). All other characters are matched literally.
-fn chip_name_matches(pattern: &str, chip_name: &str) -> bool {
-    let pattern: Vec<char> = pattern.chars().collect();
-    let chip_name: Vec<char> = chip_name.chars().collect();
-
-    let mut pattern_index = 0;
-    let mut name_index = 0;
-    let mut star: Option<usize> = None;
-    let mut star_name_index = 0;
-
-    while name_index < chip_name.len() {
-        if pattern_index < pattern.len() && pattern[pattern_index] == chip_name[name_index] {
-            pattern_index += 1;
-            name_index += 1;
-        } else if pattern_index < pattern.len() && pattern[pattern_index] == '*' {
-            star = Some(pattern_index);
-            star_name_index = name_index;
-            pattern_index += 1;
-        } else if let Some(star_index) = star {
-            pattern_index = star_index + 1;
-            star_name_index += 1;
-            name_index = star_name_index;
-        } else {
-            return false;
-        }
-    }
-
-    pattern[pattern_index..].iter().all(|c| *c == '*')
-}
 
 /// Decode the escape sequences allowed in quoted strings.
 ///
@@ -337,45 +95,41 @@ fn parse_pexpr(pexpr: Pair<Rule>) -> Expr {
 fn parse_pcompute(pcompute: Pair<Rule>) -> StmtCompute {
     debug_assert!(pcompute.as_rule() == Rule::compute);
 
-    let mut compute = StmtCompute {
-        statement: pcompute.as_str().to_owned(),
-        ..Default::default()
-    };
+    let statement = pcompute.as_str().to_owned();
 
     let mut pcompute_inner = pcompute.into_inner();
 
     let pname = pcompute_inner.next().unwrap();
-    compute.name = parse_string(pname);
+    let name = parse_string(pname);
 
     let pfrom = pcompute_inner.next().unwrap();
-    compute.from_proc = parse_pexpr(pfrom);
+    let from_proc = parse_pexpr(pfrom);
 
     let pto = pcompute_inner.next().unwrap();
-    compute.to_proc = parse_pexpr(pto);
+    let to_proc = parse_pexpr(pto);
 
-    compute
+    StmtCompute::new(name, statement, from_proc, to_proc)
 }
 
 fn parse_pignore(pignore: Pair<Rule>) -> StmtIgnore {
     debug_assert!(pignore.as_rule() == Rule::ignore);
 
-    StmtIgnore {
-        name: parse_string(pignore),
-    }
+    StmtIgnore::new(parse_string(pignore))
 }
 
 fn parse_plabel(plabel: Pair<Rule>) -> StmtLabel {
     debug_assert!(plabel.as_rule() == Rule::label);
 
-    let mut label = StmtLabel::default();
+    let mut name = String::new();
+    let mut value = String::new();
 
     for pair in plabel.into_inner() {
         match pair.as_rule() {
             Rule::name => {
-                label.name = parse_string(pair);
+                name = parse_string(pair);
             }
             Rule::string => {
-                label.value = parse_string(pair);
+                value = parse_string(pair);
             }
             _ => {
                 log::debug!("Found bad pair: {:#?}", pair);
@@ -384,21 +138,22 @@ fn parse_plabel(plabel: Pair<Rule>) -> StmtLabel {
         }
     }
 
-    label
+    StmtLabel::new(name, value)
 }
 
 fn parse_pset(pset: Pair<Rule>) -> StmtSet {
     debug_assert!(pset.as_rule() == Rule::set);
 
-    let mut set = StmtSet::default();
+    let mut name = String::new();
+    let mut value = Expr::Literal(0.0);
 
     for pair in pset.into_inner() {
         match pair.as_rule() {
             Rule::name => {
-                set.name = parse_string(pair);
+                name = parse_string(pair);
             }
             Rule::expr => {
-                set.value = parse_pexpr(pair);
+                value = parse_pexpr(pair);
             }
             _ => {
                 log::debug!("Found bad pair: {:#?}", pair);
@@ -407,7 +162,7 @@ fn parse_pset(pset: Pair<Rule>) -> StmtSet {
         }
     }
 
-    set
+    StmtSet::new(name, value)
 }
 
 fn parse_pchip(pchip: Pair<Rule>) -> StmtChip {
@@ -450,15 +205,16 @@ fn parse_pchip(pchip: Pair<Rule>) -> StmtChip {
 fn parse_pbus(pbus: Pair<Rule>) -> StmtBus {
     debug_assert!(pbus.as_rule() == Rule::bus);
 
-    let mut bus = StmtBus::default();
+    let mut number = String::new();
+    let mut adapter = String::new();
 
     for pair in pbus.into_inner() {
         match pair.as_rule() {
             Rule::name => {
-                bus.number = parse_string(pair);
+                number = parse_string(pair);
             }
             Rule::string => {
-                bus.adapter = parse_string(pair);
+                adapter = parse_string(pair);
             }
             _ => {
                 log::debug!("Found bad pair: {:#?}", pair);
@@ -467,23 +223,24 @@ fn parse_pbus(pbus: Pair<Rule>) -> StmtBus {
         }
     }
 
-    bus
+    StmtBus::new(number, adapter)
 }
 
 fn parse_pfile(pfile: Pair<Rule>) -> CfgFile {
     debug_assert!(pfile.as_rule() == Rule::file);
 
-    let mut cfg = CfgFile::default();
+    let mut buses = Vec::<StmtBus>::new();
+    let mut chips = Vec::<StmtChip>::new();
 
     for pair in pfile.into_inner() {
         match pair.as_rule() {
             Rule::bus => {
                 let bus = parse_pbus(pair);
-                cfg.buses.push(bus)
+                buses.push(bus)
             }
             Rule::chip => {
                 let chip = parse_pchip(pair);
-                cfg.chips.push(chip)
+                chips.push(chip)
             }
             _ => {
                 log::debug!("Found bad pair: {:#?}", pair);
@@ -492,7 +249,7 @@ fn parse_pfile(pfile: Pair<Rule>) -> CfgFile {
         }
     }
 
-    cfg
+    CfgFile::new(buses, chips)
 }
 
 pub(crate) fn parse_configuration_str(data: &str) -> Result<CfgFile, Error> {
@@ -522,19 +279,19 @@ mod tests {
 bus "i2c-0" "SMBus I801 adapter at 0400"
 bus "i2c-1" "SMBus PIIX4 adapter port 2 at 0b00"
 "#;
-        let expected = CfgFile {
-            buses: vec![
-                StmtBus {
-                    number: String::from("i2c-0"),
-                    adapter: String::from("SMBus I801 adapter at 0400"),
-                },
-                StmtBus {
-                    number: String::from("i2c-1"),
-                    adapter: String::from("SMBus PIIX4 adapter port 2 at 0b00"),
-                },
+        let expected = CfgFile::new(
+            vec![
+                StmtBus::new(
+                    "i2c-0".to_string(),
+                    "SMBus I801 adapter at 0400".to_string(),
+                ),
+                StmtBus::new(
+                    "i2c-1".to_string(),
+                    "SMBus PIIX4 adapter port 2 at 0b00".to_string(),
+                ),
             ],
-            ..Default::default()
-        };
+            Default::default(),
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
     }
@@ -545,17 +302,14 @@ bus "i2c-1" "SMBus PIIX4 adapter port 2 at 0b00"
 chip "blah-*"
     label foo bar
 "#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("foo"),
-                    value: String::from("bar"),
-                }],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
+                labels: vec![StmtLabel::new("foo".to_string(), "bar".to_string())],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
     }
@@ -567,17 +321,14 @@ chip "blah-*"
     label		\
      foo bar
 "#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("foo"),
-                    value: String::from("bar"),
-                }],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
+                labels: vec![StmtLabel::new("foo".to_string(), "bar".to_string())],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
     }
@@ -587,17 +338,14 @@ chip "blah-*"
         let cfg_str = r#"
 chip "blah-*"
     label foo bar"#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("foo"),
-                    value: String::from("bar"),
-                }],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
+                labels: vec![StmtLabel::new("foo".to_string(), "bar".to_string())],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
     }
@@ -608,17 +356,14 @@ chip "blah-*"
 chip "blah-*"
     label ?foo "bar"
 "#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("?foo"),
-                    value: String::from("bar"),
-                }],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
+                labels: vec![StmtLabel::new("?foo".to_string(), "bar".to_string())],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, false);
     }
@@ -629,17 +374,14 @@ chip "blah-*"
 chip "blah-*"
     label foo% "bar"
 "#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("foo%"),
-                    value: String::from("bar"),
-                }],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
+                labels: vec![StmtLabel::new("foo%".to_string(), "bar".to_string())],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, false);
     }
@@ -650,17 +392,14 @@ chip "blah-*"
 chip "blah-*"
     label baz$foo "bar"
 "#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("baz$foo"),
-                    value: String::from("bar"),
-                }],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
+                labels: vec![StmtLabel::new("baz$foo".to_string(), "bar".to_string())],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, false);
     }
@@ -671,17 +410,14 @@ chip "blah-*"
 chip "blah-*"
     label ! "bar"
 "#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("!"),
-                    value: String::from("bar"),
-                }],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
+                labels: vec![StmtLabel::new("!".to_string(), "bar".to_string())],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, false);
     }
@@ -692,17 +428,14 @@ chip "blah-*"
 chip "blah-*"
     label "foo" "bar"
 "#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("foo"),
-                    value: String::from("bar"),
-                }],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
+                labels: vec![StmtLabel::new("foo".to_string(), "bar".to_string())],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
     }
@@ -719,43 +452,22 @@ chip "blah-*"
     label "_" "foo_bar_baz"
     label "liajesiajef82197fjadf" "blah"
 "#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
                 labels: vec![
-                    StmtLabel {
-                        name: String::from("abcdefg"),
-                        value: String::from("hijklmnop"),
-                    },
-                    StmtLabel {
-                        name: String::from("qrs"),
-                        value: String::from("tuv"),
-                    },
-                    StmtLabel {
-                        name: String::from("wx"),
-                        value: String::from("yz"),
-                    },
-                    StmtLabel {
-                        name: String::from("a0123456789"),
-                        value: String::from("982lksdf"),
-                    },
-                    StmtLabel {
-                        name: String::from("_abcd"),
-                        value: String::from("1234_"),
-                    },
-                    StmtLabel {
-                        name: String::from("_"),
-                        value: String::from("foo_bar_baz"),
-                    },
-                    StmtLabel {
-                        name: String::from("liajesiajef82197fjadf"),
-                        value: String::from("blah"),
-                    },
+                    StmtLabel::new("abcdefg".to_string(), "hijklmnop".to_string()),
+                    StmtLabel::new("qrs".to_string(), "tuv".to_string()),
+                    StmtLabel::new("wx".to_string(), "yz".to_string()),
+                    StmtLabel::new("a0123456789".to_string(), "982lksdf".to_string()),
+                    StmtLabel::new("_abcd".to_string(), "1234_".to_string()),
+                    StmtLabel::new("_".to_string(), "foo_bar_baz".to_string()),
+                    StmtLabel::new("liajesiajef82197fjadf".to_string(), "blah".to_string()),
                 ],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
     }
@@ -767,17 +479,14 @@ chip "blah-*"
     label		\
      "foo" "bar"
 "#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("foo"),
-                    value: String::from("bar"),
-                }],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
+                labels: vec![StmtLabel::new("foo".to_string(), "bar".to_string())],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
     }
@@ -788,17 +497,17 @@ chip "blah-*"
 chip "blah-*"
     label escapes "\a\b\f\n\r\t\v\\\?\'\""
 "#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("escapes"),
-                    value: String::from("\x07\x08\x0C\n\r\t\x0B\\?\'\""),
-                }],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
+                labels: vec![StmtLabel::new(
+                    "escapes".to_string(),
+                    "\x07\x08\x0C\n\r\t\x0B\\?\'\"".to_string(),
+                )],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
     }
@@ -809,17 +518,14 @@ chip "blah-*"
 chip "blah-*"
     label more "\h\e\l\l\o"
 "#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("more"),
-                    value: String::from("hello"),
-                }],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
+                labels: vec![StmtLabel::new("more".to_string(), "hello".to_string())],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
     }
@@ -829,17 +535,14 @@ chip "blah-*"
         let cfg_str = r#"
 chip "blah-*"
     label "foo" "bar""#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("foo"),
-                    value: String::from("bar"),
-                }],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
+                labels: vec![StmtLabel::new("foo".to_string(), "bar".to_string())],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, true);
     }
@@ -850,17 +553,14 @@ chip "blah-*"
 chip "blah-*"
     label "foo""bar"
 "#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("foo"),
-                    value: String::from("bar"),
-                }],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
+                labels: vec![StmtLabel::new("foo".to_string(), "bar".to_string())],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, false);
     }
@@ -872,23 +572,17 @@ chip "blah-*"
     label "in0" "foo
     label "in1" "bar"
 "#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
                 labels: vec![
-                    StmtLabel {
-                        name: String::from("in0"),
-                        value: String::from("foo"),
-                    },
-                    StmtLabel {
-                        name: String::from("in1"),
-                        value: String::from("bar"),
-                    },
+                    StmtLabel::new("in0".to_string(), "foo".to_string()),
+                    StmtLabel::new("in1".to_string(), "bar".to_string()),
                 ],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, false);
     }
@@ -898,17 +592,14 @@ chip "blah-*"
         let cfg_str = r#"
 chip "blah-*"
     label "foo" "bar"#;
-        let expected = CfgFile {
-            chips: vec![StmtChip {
-                names: vec![String::from("blah-*")],
-                labels: vec![StmtLabel {
-                    name: String::from("foo"),
-                    value: String::from("bar"),
-                }],
+        let expected = CfgFile::new(
+            Default::default(),
+            vec![StmtChip {
+                names: vec!["blah-*".to_string()],
+                labels: vec![StmtLabel::new("foo".to_string(), "bar".to_string())],
                 ..Default::default()
             }],
-            ..Default::default()
-        };
+        );
         let conf = parse_configuration_str(cfg_str).unwrap_or_default();
         assert_eq!(conf == expected, false);
     }
@@ -926,21 +617,6 @@ chip "lm78-*"
     }
 
     #[test]
-    fn chip_name_matches_wildcards() {
-        assert!(chip_name_matches("*", "lm78-isa-0290"));
-        assert!(chip_name_matches("lm78-*", "lm78-isa-0290"));
-        assert!(chip_name_matches("*-isa-*", "lm78-isa-0290"));
-        assert!(chip_name_matches("*-0290", "lm78-isa-0290"));
-        assert!(chip_name_matches("lm78-*-0290", "lm78-isa-0290"));
-        assert!(chip_name_matches("lm78-isa-0290", "lm78-isa-0290"));
-
-        assert!(!chip_name_matches("lm79-*", "lm78-isa-0290"));
-        assert!(!chip_name_matches("*isa", "lm78-isa-0290"));
-        assert!(!chip_name_matches("lm78-isa", "lm78-isa-0290"));
-        assert!(!chip_name_matches("", "lm78-isa-0290"));
-    }
-
-    #[test]
     fn chip_config_finds_last_matching_statement() {
         let cfg_str = r#"
 chip "lm78-*"
@@ -953,10 +629,10 @@ chip "nothing-*"
         let conf = parse_configuration_str(cfg_str).unwrap();
 
         let config = conf.chip_config("lm78-isa-0290").unwrap();
-        assert_eq!(config.labels[0].value, "ISA voltage");
+        assert_eq!(config.labels[0].value(), "ISA voltage");
 
         let config = conf.chip_config("lm78-i2c-0-2d").unwrap();
-        assert_eq!(config.labels[0].value, "Voltage 0");
+        assert_eq!(config.labels[0].value(), "Voltage 0");
 
         assert!(conf.chip_config("nothing-isa-0000").is_some());
         assert!(conf.chip_config("other-i2c-0-2d").is_none());
