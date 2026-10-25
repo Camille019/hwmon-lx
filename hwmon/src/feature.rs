@@ -9,8 +9,7 @@ use crate::error::*;
 use crate::subfeature::{Subfeature, SubfeatureType};
 use crate::sysfs;
 
-#[cfg(feature = "sensorsconf")]
-use crate::parser::StmtChip;
+use crate::config::StmtChip;
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum FeatureType {
@@ -132,14 +131,10 @@ impl Feature {
         dir: &Path,
         feature_type: FeatureType,
         number: u32,
-        #[cfg(feature = "sensorsconf")] config: Option<&StmtChip>,
+        config: Option<&StmtChip>,
     ) -> Feature {
         let name = feature_type.sysfs_name(number);
-
-        #[cfg(feature = "sensorsconf")]
         let label_override = config.and_then(|c| c.label_of(&name).map(str::to_string));
-        #[cfg(not(feature = "sensorsconf"))]
-        let label_override = None;
 
         Feature {
             dir: dir.to_owned(),

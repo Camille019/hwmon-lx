@@ -10,7 +10,7 @@ use pest::iterators::Pair;
 
 use pest_derive::Parser;
 
-pub(crate) use crate::config::{
+use crate::config::{
     CfgFile, Expr, Function, Operator, StmtBus, StmtChip, StmtCompute, StmtIgnore, StmtLabel,
     StmtSet,
 };

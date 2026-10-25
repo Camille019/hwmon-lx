@@ -14,8 +14,7 @@ use crate::feature::{Feature, FeatureType};
 use crate::subfeature::Subfeature;
 use crate::sysfs::*;
 
-#[cfg(feature = "sensorsconf")]
-use crate::parser::StmtChip;
+use crate::config::StmtChip;
 
 #[derive(Debug)]
 pub struct FeatureIter<'a> {
@@ -36,7 +35,6 @@ pub struct Chip {
     bus: Bus,
     address: u32,
     features: btree_map::BTreeMap<(FeatureType, u32), Feature>,
-    #[cfg(feature = "sensorsconf")]
     config: Option<StmtChip>,
 }
 
@@ -141,15 +139,11 @@ impl Chip {
             bus,
             address,
             features: Default::default(),
-            #[cfg(feature = "sensorsconf")]
             config: None,
         };
 
         // Find the configuration statement matching this chip.
-        #[cfg(feature = "sensorsconf")]
-        {
-            chip.config = context.config().chip_config(&chip.name()).cloned();
-        }
+        chip.config = context.config().chip_config(&chip.name()).cloned();
 
         chip.read_dynamic_chip()?;
 
@@ -170,11 +164,9 @@ impl Chip {
         {
             let path = entry.path();
 
-            if let Ok((feature_number, subfeature)) = Subfeature::from_path(
-                &path,
-                #[cfg(feature = "sensorsconf")]
-                self.config.as_ref(),
-            ) {
+            if let Ok((feature_number, subfeature)) =
+                Subfeature::from_path(&path, self.config.as_ref())
+            {
                 let feature_type = FeatureType::from(subfeature.get_type());
                 let feature_path = self.path.as_ref();
 
@@ -182,17 +174,13 @@ impl Chip {
                     feature_path,
                     feature_type,
                     feature_number,
-                    #[cfg(feature = "sensorsconf")]
                     self.config.as_ref(),
                 );
 
-                #[cfg(feature = "sensorsconf")]
                 let ignored = self
                     .config
                     .as_ref()
                     .is_some_and(|c| c.is_ignored(feature.name()));
-                #[cfg(not(feature = "sensorsconf"))]
-                let ignored = false;
 
                 if !ignored {
                     self.features

@@ -16,8 +16,7 @@ use crate::prefix::si::*;
 use crate::ratio::Ratio;
 use crate::sysfs::*;
 
-#[cfg(feature = "sensorsconf")]
-use crate::parser::{StmtChip, StmtCompute};
+use crate::config::{StmtChip, StmtCompute};
 
 type SubfeatureTypeMap = HashMap<&'static str, SubfeatureType>;
 
@@ -321,7 +320,6 @@ pub struct Subfeature {
     subfeature_type: SubfeatureType,
     is_readable: bool,
     is_writable: bool,
-    #[cfg(feature = "sensorsconf")]
     compute: Option<StmtCompute>,
 }
 
@@ -344,14 +342,9 @@ impl Subfeature {
     /// Return the compute statement string if specified in the configuration file.
     /// Otherwise it return None.
     pub fn compute_statement(&self) -> Option<String> {
-        #[cfg(feature = "sensorsconf")]
-        {
-            self.compute
-                .as_ref()
-                .map(|compute| compute.statement().to_owned())
-        }
-        #[cfg(not(feature = "sensorsconf"))]
-        None
+        self.compute
+            .as_ref()
+            .map(|compute| compute.statement().to_owned())
     }
 
     /// Return `true` if the subfeature is readable
@@ -369,7 +362,6 @@ impl Subfeature {
         if self.is_readable() {
             let mut value = self.read_sysfs_value()?;
 
-            #[cfg(feature = "sensorsconf")]
             if let Some(compute) = &self.compute {
                 value = compute.eval_from(value);
             }
@@ -389,7 +381,6 @@ impl Subfeature {
     /// See hwmon and device driver documentation for more information.
     pub fn write_value(&self, value: f64) -> Result<(), Error> {
         if self.is_writable() {
-            #[cfg(feature = "sensorsconf")]
             let value = self.compute.as_ref().map_or(value, |c| c.eval_to(value));
 
             Ok(self.write_sysfs_value(value)?)
@@ -420,7 +411,7 @@ impl Subfeature {
 
     pub(crate) fn from_path<P: AsRef<Path>>(
         path: P,
-        #[cfg(feature = "sensorsconf")] chip_config: Option<&StmtChip>,
+        chip_config: Option<&StmtChip>,
     ) -> Result<(u32, Subfeature), SubfeatureError> {
         let path = path.as_ref();
         if !path.exists() {
@@ -451,7 +442,6 @@ impl Subfeature {
                 subfeature_type,
                 is_readable,
                 is_writable,
-                #[cfg(feature = "sensorsconf")]
                 compute,
             },
         ))
